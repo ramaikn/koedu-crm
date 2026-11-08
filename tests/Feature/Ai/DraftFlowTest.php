@@ -36,7 +36,7 @@ class DraftFlowTest extends PageTestCase
         return $fake;
     }
 
-    private function inbound(string $body = 'Mau jadwal olah data Sabtu jam 10 ya', ?WaConversation $conversation = null, string $id = null): WaMessage
+    private function inbound(string $body = 'Mau jadwal olah data Sabtu jam 10 ya', ?WaConversation $conversation = null, ?string $id = null): WaMessage
     {
         $conversation ??= WaConversation::create(['phone' => '6281234567890', 'display_name' => 'Budi WA']);
 

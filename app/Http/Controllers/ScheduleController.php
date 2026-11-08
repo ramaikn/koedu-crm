@@ -174,6 +174,8 @@ class ScheduleController extends Controller
                 'benefit' => $consultation->benefit_type?->label(),
                 'tutor' => ['id' => $consultation->tutor_id, 'name' => $consultation->tutor->name],
                 'tutor_notes' => $consultation->tutor_notes,
+                'tutor_notified_at' => $consultation->tutor_notified_at?->toIso8601String(),
+                'tutor_reminded_at' => $consultation->tutor_reminded_at?->toIso8601String(),
                 'cancel_reason' => $consultation->cancel_reason,
                 'created_by' => $consultation->creator?->name,
                 'capacity' => $consultation->capacity,
@@ -189,6 +191,10 @@ class ScheduleController extends Controller
                     'quota_remaining' => $quota?->remaining(),
                     'quota_unlimited' => $quota?->isUnlimited() ?? false,
                     'quota_deducted' => $p->quota_deducted_at !== null,
+                    // Status pesan otomatis ke client ini, supaya admin tahu apa yang sudah terkirim.
+                    'confirmation_sent_at' => $p->confirmation_sent_at?->toIso8601String(),
+                    'reminder_day_sent_at' => $p->reminder_day_sent_at?->toIso8601String(),
+                    'reminder_hour_sent_at' => $p->reminder_hour_sent_at?->toIso8601String(),
                 ];
             })->values(),
             'can' => [

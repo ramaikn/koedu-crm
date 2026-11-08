@@ -1,0 +1,60 @@
+{
+  "id": "koeduNotifikasi01",
+  "name": "Notifikasi dan pengingat (tiap 5 menit)",
+  "active": true,
+  "nodes": [
+    {
+      "parameters": {
+        "content": "Memicu Laravel tiap 5 menit. Laravel yang menentukan siapa yang perlu dikabari (jadwal baru/berubah/batal, pengingat H-1 dan 1 jam sebelum sesi, ringkasan harian admin), mengirim lewat WhatsApp, dan mencegah pesan ganda.\n\nTidak ada yang terkirim bila NOTIFICATIONS_ENABLED=false di .env.",
+        "height": 140,
+        "width": 420
+      },
+      "id": "3d2b8c74-4c0a-4f5a-8f77-2e4a0a1c3d01",
+      "name": "Catatan",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [0, -180]
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [{ "field": "minutes", "minutesInterval": 5 }]
+        }
+      },
+      "id": "4e3c9d85-5d1b-4a6a-9a88-3f5b1b2d4e02",
+      "name": "Tiap 5 menit",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [0, 0]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.KOEDU_API_URL }}/api/n8n/notifications/run",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "X-Koedu-Token", "value": "={{ $env.KOEDU_N8N_TOKEN }}" },
+            { "name": "Accept", "value": "application/json" }
+          ]
+        },
+        "options": { "timeout": 60000 }
+      },
+      "id": "5f4d0e96-6e2c-4b7b-8b99-4a6c2c3e5f03",
+      "name": "Jalankan notifikasi di Laravel",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [260, 0],
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 5000
+    }
+  ],
+  "connections": {
+    "Tiap 5 menit": {
+      "main": [[{ "node": "Jalankan notifikasi di Laravel", "type": "main", "index": 0 }]]
+    }
+  },
+  "settings": { "executionOrder": "v1", "timezone": "Asia/Makassar" },
+  "pinData": {}
+}

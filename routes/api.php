@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Api\CloudWebhookController;
+use App\Http\Controllers\Api\N8nNotificationController;
 use App\Http\Controllers\Api\N8nWhatsAppController;
 use App\Http\Middleware\VerifyN8nToken;
 use Illuminate\Support\Facades\Route;
@@ -8,6 +9,7 @@ use Illuminate\Support\Facades\Route;
 // Endpoint untuk n8n. Dilindungi token di header X-Koedu-Token.
 Route::middleware(VerifyN8nToken::class)->prefix('n8n')->group(function () {
     Route::post('whatsapp/incoming', [N8nWhatsAppController::class, 'incoming']);
+    Route::post('notifications/run', [N8nNotificationController::class, 'run']);
 });
 
 // Webhook langsung dari Meta bila memakai WhatsApp Cloud API resmi (WHATSAPP_DRIVER=cloud_api).

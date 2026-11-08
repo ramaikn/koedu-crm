@@ -43,8 +43,9 @@ final class SendWhatsAppMessage
             ]);
         });
 
-        // Dikirim setelah transaksi selesai, supaya worker tidak mencari pesan yang belum tersimpan.
-        SendWhatsAppMessageJob::dispatch($message->id)->onQueue('whatsapp');
+        // Dikirim setelah transaksi paling luar selesai, supaya worker tidak mencari pesan yang belum tersimpan.
+        // Penting saat dipanggil dari dalam transaksi lain (mis. pengirim notifikasi yang mengklaim lalu mengantre).
+        SendWhatsAppMessageJob::dispatch($message->id)->onQueue('whatsapp')->afterCommit();
 
         return $message;
     }

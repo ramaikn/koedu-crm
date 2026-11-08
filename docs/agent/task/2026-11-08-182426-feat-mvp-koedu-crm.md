@@ -30,8 +30,9 @@ Acuan: [kebutuhan-bisnis.md](../knowledge/kebutuhan-bisnis.md), [arsitektur.md](
 15. [x] Adapter `WhatsAppProvider` (driver waha, cloud_api) + inbox WA (baca, balas). Template WA resmi (di luar 24 jam) belum ada
 16. [x] Adapter `AiProvider` (Gemini dengan rotasi key dan model cadangan, cadangan OpenAI-compatible, fallback) + draf jadwal dari chat + persetujuan di inbox. Diuji dengan Gemini sungguhan lewat `ai:check` dan webhook simulasi. Chat sungguhan dari HP belum dicoba
 17. [ ] `SheetSync` lewat queue ke Google Sheets
-18. [ ] (berjalan) API untuk n8n (token): webhook WA masuk (sudah), daftar reminder jatuh tempo, tandai terkirim (belum)
-19. [ ] (berjalan) Workflow n8n (JSON di repo). Sudah: WA masuk ke Laravel. Belum: notif tutor saat jadwal disetujui, reminder H-1 dan 1 jam, paket hampir habis, pembayaran belum lunas
+18. [x] API untuk n8n (token): webhook WA masuk dan pemicu notifikasi `POST /api/n8n/notifications/run`. Rancangan berubah dari rencana awal: Laravel yang menentukan dan mengirim (n8n hanya pemicu), jadi endpoint "daftar reminder" dan "tandai terkirim" tidak diperlukan
+19. [ ] (berjalan) Workflow n8n (JSON di repo): WA masuk (sudah), notifikasi dan pengingat berkala (sudah, kode dan test selesai). Belum: uji kirim sungguhan ke nomor sendiri (isi `NOTIFY_ALLOWED_PHONES`, nyalakan `NOTIFICATIONS_ENABLED`)
+19a. [ ] Template WhatsApp resmi (Meta) untuk pesan di luar jendela 24 jam, dibutuhkan sebelum pindah ke Cloud API (pengingat ke client yang lama tidak chat)
 20. [ ] (berjalan) Dashboard director. Sudah: ringkasan harian (sesi hari ini, belum lunas, chat belum dibaca, client baru, paket hampir berakhir). Belum: grafik client baru, sesi per tutor, selesai/batal, pendapatan per bulan
 21. [x] Halaman tutor: jadwal saya (daftar per hari), detail sesi, selesaikan sesi dengan absensi dan catatan
 

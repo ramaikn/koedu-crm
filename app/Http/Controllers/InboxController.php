@@ -3,11 +3,16 @@
 namespace App\Http\Controllers;
 
 use App\Actions\WhatsApp\SendWhatsAppMessage;
+use App\Enums\MessageDirection;
+use App\Enums\MessageStatus;
+use App\Jobs\SendWhatsAppMessageJob;
 use App\Models\ScheduleDraft;
 use App\Models\WaConversation;
+use App\Models\WaMessage;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -46,6 +51,21 @@ class InboxController extends Controller
         $send->reply($conversation, trim($data['body']), $request->user());
 
         return back();
+    }
+
+    /** Kirim ulang pesan keluar yang gagal. Percobaan otomatis sudah habis, jadi keputusan ada di admin. */
+    public function retry(WaMessage $message): RedirectResponse
+    {
+        Gate::authorize('reply', $message->conversation);
+
+        if ($message->direction !== MessageDirection::Outbound || $message->status !== MessageStatus::Failed) {
+            throw ValidationException::withMessages(['message' => 'Hanya pesan keluar yang gagal yang bisa dikirim ulang.']);
+        }
+
+        $message->update(['status' => MessageStatus::Queued, 'error' => null]);
+        SendWhatsAppMessageJob::dispatch($message->id)->onQueue('whatsapp');
+
+        return back()->with('success', 'Pesan dikirim ulang.');
     }
 
     /** @return array<string, mixed> */

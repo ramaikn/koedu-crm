@@ -7,7 +7,7 @@ import { Dialog, DialogClose, DialogContent, DialogDescription, DialogFooter, Di
 import { NativeSelect } from '@/components/ui/native-select';
 import { Textarea } from '@/components/ui/textarea';
 import AppLayout from '@/layouts/app-layout';
-import { formatLongDate, formatTime } from '@/lib/datetime';
+import { formatDateTime, formatLongDate, formatTime } from '@/lib/datetime';
 import { type BreadcrumbItem, type SharedData } from '@/types';
 import { Head, Link, useForm, usePage } from '@inertiajs/react';
 import { Pencil, X } from 'lucide-react';
@@ -21,6 +21,9 @@ interface Participant {
     quota_remaining: number | null;
     quota_unlimited: boolean;
     quota_deducted: boolean;
+    confirmation_sent_at: string | null;
+    reminder_day_sent_at: string | null;
+    reminder_hour_sent_at: string | null;
 }
 
 interface Props {
@@ -38,6 +41,8 @@ interface Props {
         benefit: string | null;
         tutor: { id: number; name: string };
         tutor_notes: string | null;
+        tutor_notified_at: string | null;
+        tutor_reminded_at: string | null;
         cancel_reason: string | null;
         created_by: string | null;
         capacity: number;
@@ -131,12 +136,13 @@ export default function ScheduleShow({ consultation, participants, can }: Props)
                         </CardContent>
                     </Card>
 
-                    <div className="lg:col-span-2">
+                    <div className="flex flex-col gap-6 lg:col-span-2">
                         {can.complete ? (
                             <CompleteForm consultationId={consultation.id} participants={participants} />
                         ) : (
                             <ParticipantsCard participants={participants} notes={consultation.tutor_notes} blockedUntilStart={can.complete_blocked_until_start} />
                         )}
+                        {consultation.status.value === 'scheduled' && <NotificationStatus consultation={consultation} participants={participants} timezone={timezone} />}
                     </div>
                 </div>
             </div>
@@ -285,5 +291,52 @@ function CancelDialog({ consultationId }: { consultationId: number }) {
                 </form>
             </DialogContent>
         </Dialog>
+    );
+}
+
+/** Pesan WhatsApp otomatis untuk sesi ini: yang sudah terkirim dan yang masih menunggu. */
+function NotificationStatus({ consultation, participants, timezone }: { consultation: Props['consultation']; participants: Participant[]; timezone: string }) {
+    const sent = (iso: string | null) => (iso ? <span>{formatDateTime(iso, timezone)}</span> : <span className="text-muted-foreground">Belum</span>);
+
+    return (
+        <Card>
+            <CardHeader>
+                <CardTitle className="text-base">Pesan otomatis</CardTitle>
+            </CardHeader>
+            <CardContent className="grid gap-4 text-sm">
+                <div>
+                    <div className="font-medium">Tutor: {consultation.tutor.name}</div>
+                    <dl className="mt-1 grid gap-1 sm:grid-cols-2">
+                        <div className="flex justify-between gap-3 sm:block">
+                            <dt className="text-muted-foreground text-xs">Kabar jadwal</dt>
+                            <dd>{sent(consultation.tutor_notified_at)}</dd>
+                        </div>
+                        <div className="flex justify-between gap-3 sm:block">
+                            <dt className="text-muted-foreground text-xs">Pengingat sebelum sesi</dt>
+                            <dd>{sent(consultation.tutor_reminded_at)}</dd>
+                        </div>
+                    </dl>
+                </div>
+                {participants.map((p) => (
+                    <div key={p.id} className="border-t pt-3">
+                        <div className="font-medium">Client: {p.client.name}</div>
+                        <dl className="mt-1 grid gap-1 sm:grid-cols-3">
+                            <div className="flex justify-between gap-3 sm:block">
+                                <dt className="text-muted-foreground text-xs">Konfirmasi</dt>
+                                <dd>{sent(p.confirmation_sent_at)}</dd>
+                            </div>
+                            <div className="flex justify-between gap-3 sm:block">
+                                <dt className="text-muted-foreground text-xs">Pengingat H-1</dt>
+                                <dd>{sent(p.reminder_day_sent_at)}</dd>
+                            </div>
+                            <div className="flex justify-between gap-3 sm:block">
+                                <dt className="text-muted-foreground text-xs">Pengingat sebelum sesi</dt>
+                                <dd>{sent(p.reminder_hour_sent_at)}</dd>
+                            </div>
+                        </dl>
+                    </div>
+                ))}
+            </CardContent>
+        </Card>
     );
 }

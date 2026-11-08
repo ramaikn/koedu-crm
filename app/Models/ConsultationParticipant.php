@@ -15,6 +15,9 @@ class ConsultationParticipant extends Model
         'attendance',
         'quota_deducted_at',
         'confirmation_sent_at',
+        'confirmed_starts_at',
+        'confirmed_tutor_id',
+        'cancel_notified_at',
         'reminder_day_sent_at',
         'reminder_hour_sent_at',
     ];
@@ -25,6 +28,8 @@ class ConsultationParticipant extends Model
             'attendance' => AttendanceStatus::class,
             'quota_deducted_at' => 'datetime',
             'confirmation_sent_at' => 'datetime',
+            'confirmed_starts_at' => 'datetime',
+            'cancel_notified_at' => 'datetime',
             'reminder_day_sent_at' => 'datetime',
             'reminder_hour_sent_at' => 'datetime',
         ];

@@ -8,8 +8,11 @@ use App\Enums\PaymentStatus;
 use App\Models\Client;
 use App\Models\Consultation;
 use App\Models\Enrollment;
+use App\Enums\MessageDirection;
+use App\Enums\MessageStatus;
 use App\Models\ScheduleDraft;
 use App\Models\WaConversation;
+use App\Models\WaMessage;
 use Carbon\CarbonImmutable;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -58,6 +61,8 @@ class DashboardController extends Controller
                     'unpaid_enrollments' => Enrollment::where('status', EnrollmentStatus::Active)->where('payment_status', PaymentStatus::Unpaid)->count(),
                     'unread_conversations' => WaConversation::where('unread_count', '>', 0)->count(),
                     'pending_drafts' => ScheduleDraft::pending()->count(),
+                    'failed_messages' => WaMessage::where('direction', MessageDirection::Outbound)->where('status', MessageStatus::Failed)
+                        ->where('created_at', '>=', now()->subDay())->count(),
                     'new_clients_7d' => Client::where('created_at', '>=', $now->subDays(7))->count(),
                 ],
                 'expiring' => $expiring->map(fn (Enrollment $e) => [

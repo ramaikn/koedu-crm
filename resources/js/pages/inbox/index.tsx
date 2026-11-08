@@ -198,7 +198,20 @@ function Thread({ active, canReply }: { active: ActiveConversation; canReply: bo
                                 {m.direction === 'outbound' && <span>{m.status_label}</span>}
                                 <span>{formatTime(m.at, timezone)}</span>
                             </div>
-                            {m.status === 'failed' && <p className="mt-1 text-xs font-medium text-red-200">Gagal terkirim. Coba kirim ulang nanti.</p>}
+                            {m.status === 'failed' && (
+                                <div className="mt-1 flex items-center justify-between gap-3 text-xs font-medium text-red-200">
+                                    <span>Gagal terkirim.</span>
+                                    {canReply && (
+                                        <button
+                                            type="button"
+                                            onClick={() => router.post(route('inbox.retry', m.id), {}, { preserveScroll: true })}
+                                            className="underline hover:no-underline"
+                                        >
+                                            Kirim ulang
+                                        </button>
+                                    )}
+                                </div>
+                            )}
                         </div>
                     </div>
                 ))}

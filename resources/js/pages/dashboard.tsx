@@ -18,7 +18,14 @@ interface Props {
     role: 'director' | 'admin' | 'tutor';
     today: SessionItem[];
     upcoming: SessionItem[];
-    stats?: { sessions_today: number; unpaid_enrollments: number; unread_conversations: number; pending_drafts: number; new_clients_7d: number };
+    stats?: {
+        sessions_today: number;
+        unpaid_enrollments: number;
+        unread_conversations: number;
+        pending_drafts: number;
+        failed_messages: number;
+        new_clients_7d: number;
+    };
     expiring?: { id: number; client_id: number; client: string; package: string; ends_on: string }[];
 }
 
@@ -34,6 +41,7 @@ export default function Dashboard({ role, today, upcoming, stats, expiring }: Pr
               { label: 'Paket belum lunas', value: stats.unpaid_enrollments, href: route('clients.index') },
               { label: 'Chat belum dibaca', value: stats.unread_conversations, href: route('inbox.index') },
               { label: 'Draf jadwal menunggu', value: stats.pending_drafts, href: route('inbox.index') },
+              { label: 'Pesan gagal terkirim (24 jam)', value: stats.failed_messages, href: route('inbox.index') },
               { label: 'Client baru (7 hari)', value: stats.new_clients_7d, href: route('clients.index') },
           ]
         : [];
@@ -71,7 +79,7 @@ export default function Dashboard({ role, today, upcoming, stats, expiring }: Pr
                 <PageHeader title={`Halo, ${auth.user.name.split(' ')[0]}`} description={isTutor ? 'Jadwal bimbingan Anda.' : 'Ringkasan hari ini.'} />
 
                 {cards.length > 0 && (
-                    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
+                    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
                         {cards.map((card) => (
                             <Link key={card.label} href={card.href} className="hover:bg-muted/30 rounded-xl border p-4">
                                 <div className="text-muted-foreground text-sm">{card.label}</div>

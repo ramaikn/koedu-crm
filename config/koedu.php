@@ -62,6 +62,30 @@ return [
         'api_token' => env('N8N_API_TOKEN'),
     ],
 
+    'notifications' => [
+        // Saklar utama. Mati bawaan: nyalakan setelah NOTIFY_ALLOWED_PHONES atau nomor sungguhan siap.
+        'enabled' => (bool) env('NOTIFICATIONS_ENABLED', false),
+        // Pengaman uji: bila diisi, pesan hanya dikirim ke nomor ini (format 62xxx, dipisah koma).
+        // Data demo memakai nomor palsu, dan mengirim ke nomor yang tidak ada berisiko membuat nomor WA diblokir.
+        'allowed_phones' => array_values(array_filter(array_map('trim', explode(',', (string) env('NOTIFY_ALLOWED_PHONES', ''))))),
+        // Pesan hanya dikirim di jendela ini (WITA). Di luarnya ditunda, kecuali sesinya dalam urgent_hours ke depan.
+        'window_start' => env('NOTIFY_WINDOW_START', '07:00'),
+        'window_end' => env('NOTIFY_WINDOW_END', '21:00'),
+        'urgent_hours' => (int) env('NOTIFY_URGENT_HOURS', 12),
+        // Pengingat client sehari sebelum sesi dikirim pada jam ini.
+        'day_reminder_time' => env('NOTIFY_DAY_REMINDER_TIME', '18:00'),
+        // Pengingat sebelum sesi (client dan tutor), dalam menit. Dilewati bila sisa waktu kurang dari min_lead_minutes.
+        'hour_reminder_minutes' => (int) env('NOTIFY_HOUR_REMINDER_MINUTES', 60),
+        'min_lead_minutes' => (int) env('NOTIFY_MIN_LEAD_MINUTES', 10),
+        // Ringkasan harian untuk admin.
+        'digest_time' => env('NOTIFY_DIGEST_TIME', '08:00'),
+        'admin_phones' => array_values(array_filter(array_map('trim', explode(',', (string) env('NOTIFY_ADMIN_PHONES', ''))))),
+        'expiring_days' => (int) env('NOTIFY_EXPIRING_DAYS', 7),
+        'unpaid_days' => (int) env('NOTIFY_UNPAID_DAYS', 3),
+        // Nama pengirim di pesan ke client dan tutor.
+        'sender_name' => env('NOTIFY_SENDER_NAME', 'Tim Bimbingan'),
+    ],
+
     'quota' => [
         // Apakah client yang tidak hadir tetap dipotong kuotanya. Kebijakan bisnis, bisa diubah lewat .env.
         'deduct_on_absent' => (bool) env('QUOTA_DEDUCT_ON_ABSENT', false),

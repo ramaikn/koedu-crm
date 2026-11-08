@@ -35,7 +35,7 @@ Driver dipilih lewat `WHATSAPP_DRIVER` (`waha` atau `cloud_api`), dibind di `App
 ## n8n
 - Workflow disimpan di `n8n/workflows/*.json` (id tetap, ditulis di dalam file). Impor dan aktifkan: `sh scripts/n8n-import.sh`.
 - Variabel yang dipakai workflow: `KOEDU_API_URL`, `KOEDU_N8N_TOKEN` (diset di `compose.yaml`).
-- Workflow yang ada: `wa-incoming` (WAHA ke Laravel, retry 3 kali). Notifikasi tutor dan reminder belum dibuat.
+- Workflow yang ada: `wa-incoming` (WAHA ke Laravel, retry 3 kali) dan `notifikasi-berkala` (pemicu tiap 5 menit untuk notifikasi dan pengingat, lihat [notifikasi.md](notifikasi.md)).
 
 ## WAHA
 - Edisi gratis (CORE): satu sesi bernama `default`. Sesi ditautkan dengan scan QR di http://localhost:3000/dashboard.

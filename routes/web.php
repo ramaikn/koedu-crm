@@ -72,6 +72,7 @@ Route::middleware(['auth'])->group(function () {
         Route::get('inbox', [InboxController::class, 'index'])->name('inbox.index');
         Route::get('inbox/{conversation}', [InboxController::class, 'show'])->name('inbox.show');
         Route::post('inbox/{conversation}/messages', [InboxController::class, 'reply'])->name('inbox.reply');
+        Route::post('inbox/messages/{message}/retry', [InboxController::class, 'retry'])->name('inbox.retry');
     });
 });
 
