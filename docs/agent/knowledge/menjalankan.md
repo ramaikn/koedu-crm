@@ -23,7 +23,9 @@ bun install && bun run build     # aset frontend (atau pakai profil dev di bawah
 ## Sehari-hari
 - Hot reload frontend: `docker compose --profile dev up -d` (Vite di port 5173). Hapus `public/hot` bila kembali ke aset build.
 - Reset data demo: `docker compose exec app php artisan migrate:fresh --seed`
-- Test: `docker compose exec app php artisan test` (SQLite in-memory, cepat)
+- Test: `bun run build` dulu bila ada halaman frontend baru (manifest Vite harus memuatnya), lalu `docker compose exec app php artisan test` (SQLite in-memory, cepat)
+- Impor workflow n8n: `sh scripts/n8n-import.sh` (jalankan dari Git Bash/Linux di folder proyek)
+- Setelah mengubah kode PHP yang dipakai antrean: `docker compose restart worker scheduler` (worker tidak memuat ulang kode otomatis)
 - Typecheck frontend: `bun x tsc --noEmit`
 - Log aplikasi: folder `logs/`. Log container: `docker compose logs -f <layanan>`
 - Setelah menambah paket Composer: `docker compose run --rm app composer install` (vendor ada di volume Docker)

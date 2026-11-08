@@ -1,0 +1,53 @@
+{
+  "id": "koeduWaIncoming01",
+  "name": "WA masuk -> Laravel",
+  "active": true,
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "wa-incoming",
+        "responseMode": "lastNode",
+        "options": {}
+      },
+      "id": "1b0f6a52-2a8e-4d3e-9d55-0c1d8c8f0a01",
+      "name": "Webhook WAHA",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [0, 0],
+      "webhookId": "7d0c5f4e-3b8a-4a52-9c61-0f2e6b1a4d01"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.KOEDU_API_URL }}/api/n8n/whatsapp/incoming",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "X-Koedu-Token", "value": "={{ $env.KOEDU_N8N_TOKEN }}" },
+            { "name": "Accept", "value": "application/json" }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json.body) }}",
+        "options": {}
+      },
+      "id": "2c1a7b63-3b9f-4e4f-8e66-1d3f9d2a1b02",
+      "name": "Teruskan ke Laravel",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [260, 0],
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 2000
+    }
+  ],
+  "connections": {
+    "Webhook WAHA": {
+      "main": [[{ "node": "Teruskan ke Laravel", "type": "main", "index": 0 }]]
+    }
+  },
+  "settings": { "executionOrder": "v1" },
+  "pinData": {}
+}

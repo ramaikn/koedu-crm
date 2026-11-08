@@ -24,11 +24,11 @@ Acuan: [kebutuhan-bisnis.md](../knowledge/kebutuhan-bisnis.md), [arsitektur.md](
 12. [ ] CRUD client, tutor, paket, enrollment, pembayaran (lunas/belum, bukti transfer)
 13. [ ] (berjalan) Jadwal: sesi privat dan grup (kapasitas 20), cek bentrok tutor, absensi, potong kuota saat selesai. Sudah: `CompleteConsultation` (absensi + potong kuota). Belum: buat/ubah jadwal + cek bentrok
 14. [ ] Saran tutor: skor dari bidang, jenjang, jam kosong, beban kerja
-15. [ ] Adapter `WhatsAppProvider` (driver waha, cloud_api) + inbox WA (baca, balas)
+15. [x] Adapter `WhatsAppProvider` (driver waha, cloud_api) + inbox WA (baca, balas). Template WA resmi (di luar 24 jam) belum ada
 16. [ ] Adapter `AiProvider` (driver gemini, rotasi key saat 429, fallback provider) + draf jadwal dari chat
 17. [ ] `SheetSync` lewat queue ke Google Sheets
-18. [ ] API untuk n8n (token): webhook WA masuk, daftar reminder jatuh tempo, tandai terkirim
-19. [ ] Workflow n8n (JSON di repo): webhook WA ke Laravel, notif tutor saat jadwal disetujui, reminder H-1 dan 1 jam, paket hampir habis, pembayaran belum lunas
+18. [ ] (berjalan) API untuk n8n (token): webhook WA masuk (sudah), daftar reminder jatuh tempo, tandai terkirim (belum)
+19. [ ] (berjalan) Workflow n8n (JSON di repo). Sudah: WA masuk ke Laravel. Belum: notif tutor saat jadwal disetujui, reminder H-1 dan 1 jam, paket hampir habis, pembayaran belum lunas
 20. [ ] Dashboard director: client baru, sesi per tutor, selesai/batal, pendapatan per bulan
 21. [ ] Halaman tutor: jadwal saya, catatan sesi
 

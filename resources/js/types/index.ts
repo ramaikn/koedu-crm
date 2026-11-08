@@ -14,11 +14,15 @@ export interface NavGroup {
     items: NavItem[];
 }
 
+export type UserRole = 'director' | 'admin' | 'tutor';
+
 export interface NavItem {
     title: string;
     url: string;
     icon?: LucideIcon | null;
     isActive?: boolean;
+    /** Bila diisi, menu hanya tampil untuk role ini. */
+    roles?: UserRole[];
 }
 
 export interface SharedData {
@@ -32,6 +36,7 @@ export interface User {
     id: number;
     name: string;
     email: string;
+    role: UserRole;
     avatar?: string;
     email_verified_at: string | null;
     created_at: string;
