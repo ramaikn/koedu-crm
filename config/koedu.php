@@ -31,7 +31,8 @@ return [
         'timeout' => (int) env('AI_TIMEOUT_SECONDS', 20),
         'gemini' => [
             'keys' => array_values(array_filter(array_map('trim', explode(',', (string) env('GEMINI_API_KEYS', ''))))),
-            'model' => env('GEMINI_MODEL', 'gemini-2.5-flash'),
+            // Satu atau beberapa model dipisah koma, urutan prioritas. Model berikutnya dipakai bila yang pertama sibuk atau pensiun.
+            'models' => array_values(array_filter(array_map('trim', explode(',', (string) env('GEMINI_MODEL', 'gemini-3.1-flash-lite,gemini-flash-latest'))))),
             'key_cooldown' => (int) env('GEMINI_KEY_COOLDOWN_SECONDS', 60),
         ],
         // Provider cadangan yang kompatibel dengan format OpenAI (OpenAI, OpenRouter, Groq, model lokal, dan lainnya).

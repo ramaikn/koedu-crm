@@ -45,7 +45,7 @@ class AppServiceProvider extends ServiceProvider
         $providers = array_map(fn (string $name) => match ($name) {
             'gemini' => new GeminiProvider(
                 $config['gemini']['keys'],
-                $config['gemini']['model'],
+                $config['gemini']['models'],
                 $config['timeout'],
                 $config['gemini']['key_cooldown'],
                 $this->app->make(CacheFactory::class)->store(),

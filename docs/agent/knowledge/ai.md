@@ -16,7 +16,7 @@ Inbox: kartu draf --> "Atur jadwal" membuka form jadwal terisi (/schedule/create
 | Kelas | Fungsi |
 |---|---|
 | `AiProvider` | `generateJson(system, prompt, schema)` menghasilkan `AiResult` (data, provider, model) |
-| `GeminiProvider` | Google AI Studio. Banyak key: 429 mengistirahatkan key `GEMINI_KEY_COOLDOWN_SECONDS` lalu pindah ke key berikutnya. Key ditolak (400 `API_KEY_INVALID`, 401, 403) istirahat 1 jam. 5xx dan gangguan jaringan pindah key tanpa mengistirahatkan. Permintaan ditolak karena isi/skema (400 lain) tidak dicoba dengan key lain. Status istirahat di cache (dipakai bersama semua worker). Key dikirim lewat header `x-goog-api-key`, tidak di URL atau log |
+| `GeminiProvider` | Google AI Studio. Banyak key dan banyak model (`GEMINI_MODEL` dipisah koma, urutan prioritas). Per key: model sibuk (5xx), pensiun (404), atau timeout dilewati ke model berikutnya dengan key yang sama. 429 mengistirahatkan key `GEMINI_KEY_COOLDOWN_SECONDS` lalu pindah key. Key ditolak (400 `API_KEY_INVALID`, 401, 403) istirahat 1 jam. Permintaan ditolak karena skema (400 lain) tidak dicoba ulang. Status istirahat key di cache (dipakai bersama semua worker). Key dikirim lewat header `x-goog-api-key`, tidak di URL atau log |
 | `OpenAiCompatibleProvider` | Cadangan berformat OpenAI Chat Completions (OpenAI, OpenRouter, Groq, model lokal). Aktif bila `openai` ada di `AI_PROVIDERS` |
 | `FallbackAiProvider` | Mencoba provider sesuai urutan `AI_PROVIDERS`; jawaban tidak sah dari satu provider tetap lanjut ke berikutnya |
 | `AiAvailability` | AI aktif hanya bila `AI_ENABLED=true` dan ada key untuk provider terpilih |
@@ -33,10 +33,16 @@ Exception: `AiUnavailableException` (limit, jaringan, key), `AiInvalidResponseEx
 ## Data yang dikirim ke penyedia AI
 Teks chat (nomor telepon disamarkan), nama client terdaftar, jenjang, jurusan, dan nama WhatsApp. Tanpa nomor telepon, email, atau data keuangan. Catatan: API gratis dari beberapa penyedia boleh memakai data untuk melatih model. Untuk data client sungguhan, pakai key dengan penagihan aktif atau penyedia yang menjamin data tidak dipakai melatih.
 
+## Model Gemini
+- Google rutin memensiunkan model. `gemini-2.5-flash` sudah tidak tersedia untuk akun baru (generate 404, walau masih muncul di daftar model). Pemeriksaan "model ada" lewat daftar model menyesatkan, jadi `ai:check` mencoba generate sungguhan.
+- Yang terbukti jalan pada 2026-11-08: `gemini-3.1-flash-lite`, `gemini-3-flash-preview`, `gemini-flash-latest` (alias yang mengikuti model terbaru, tetapi saat diuji sering timeout karena kena lonjakan permintaan). Model "preview" bisa dicabut sewaktu-waktu, makanya daftar berisi beberapa model.
+- Urutan `.env` lokal: `gemini-3.1-flash-lite,gemini-3-flash-preview,gemini-flash-latest`. Saat diuji model pertama sempat gagal dan cadangan otomatis dipakai.
+- Cara membandingkan model tanpa mengubah `.env`: `php artisan ai:check --model=nama1,nama2`.
+
 ## Menyalakan dan memeriksa
 1. Isi `GEMINI_API_KEYS` di `.env` (dipisah koma) dan, bila perlu, `GEMINI_MODEL`.
 2. `docker compose restart app worker scheduler`
-3. `docker compose exec app php artisan ai:check` memeriksa tiap key (OK, ditolak, kuota habis, model tidak ditemukan) dan menjalankan satu ekstraksi percobaan. API key tidak pernah ditampilkan.
+3. `docker compose exec app php artisan ai:check` mencoba generate untuk tiap pasangan key dan model (OK, ditolak, kuota habis, model tidak bisa dipakai, Google sibuk) lalu menjalankan satu ekstraksi percobaan. API key tidak pernah ditampilkan.
 4. Kirim chat permintaan jadwal dari HP lain, lalu lihat kartu "Draf jadwal" di inbox.
 
 Di test, AI dimatikan (`AI_ENABLED=false` di `phpunit.xml`) supaya tidak pernah memanggil jaringan. Test yang butuh AI menyalakannya dan memakai `FakeAiProvider`.

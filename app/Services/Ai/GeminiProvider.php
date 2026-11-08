@@ -9,11 +9,13 @@ use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 
 /**
- * Google AI Studio (Gemini API) dengan banyak API key.
+ * Google AI Studio (Gemini API) dengan banyak API key dan daftar model cadangan.
  *
  * Key yang kena limit (HTTP 429) diistirahatkan sementara, lalu permintaan diulang dengan key berikutnya.
- * Key yang ditolak (tidak valid) diistirahatkan lebih lama. Status istirahat disimpan di cache supaya
- * dipakai bersama oleh semua worker. API key dikirim lewat header, tidak pernah lewat URL atau log.
+ * Key yang ditolak (tidak valid) diistirahatkan lebih lama. Model yang sedang sibuk (503), habis masa
+ * pakainya (404), atau timeout diganti dengan model berikutnya di daftar, dengan key yang sama.
+ * Status istirahat key disimpan di cache supaya dipakai bersama semua worker.
+ * API key dikirim lewat header, tidak pernah lewat URL atau log.
  */
 final class GeminiProvider implements AiProvider
 {
@@ -22,10 +24,13 @@ final class GeminiProvider implements AiProvider
     /** Key yang ditolak (salah, dicabut, atau tanpa izin) diistirahatkan selama ini sebelum dicoba lagi. */
     private const REJECTED_KEY_COOLDOWN_SECONDS = 3600;
 
-    /** @param list<string> $keys */
+    /**
+     * @param  list<string>  $keys
+     * @param  list<string>  $models  urutan prioritas; model berikutnya dipakai bila yang sebelumnya gagal
+     */
     public function __construct(
         private readonly array $keys,
-        private readonly string $model,
+        private readonly array $models,
         private readonly int $timeoutSeconds,
         private readonly int $cooldownSeconds,
         private readonly Cache $cache,
@@ -42,6 +47,9 @@ final class GeminiProvider implements AiProvider
         if ($available === []) {
             throw new AiUnavailableException('Tidak ada API key Gemini yang bisa dipakai (belum diisi atau semuanya sedang istirahat).');
         }
+        if ($this->models === []) {
+            throw new AiUnavailableException('GEMINI_MODEL belum diisi.');
+        }
 
         $body = [
             'systemInstruction' => ['parts' => [['text' => $system]]],
@@ -57,26 +65,33 @@ final class GeminiProvider implements AiProvider
         $lastReason = 'tidak diketahui';
 
         foreach ($available as $index => $key) {
-            try {
-                $response = Http::withHeaders(['x-goog-api-key' => $key])
-                    ->acceptJson()
-                    ->timeout($this->timeoutSeconds)
-                    ->post(self::ENDPOINT."/models/{$this->model}:generateContent", $body);
-            } catch (ConnectionException $e) {
-                $lastReason = 'koneksi ke Gemini gagal';
-                Log::warning('Gemini: koneksi gagal, mencoba key berikutnya', ['key' => $index + 1]);
+            foreach ($this->models as $model) {
+                try {
+                    $response = Http::withHeaders(['x-goog-api-key' => $key])
+                        ->acceptJson()
+                        ->timeout($this->timeoutSeconds)
+                        ->post(self::ENDPOINT."/models/{$model}:generateContent", $body);
+                } catch (ConnectionException) {
+                    $lastReason = "koneksi ke {$model} gagal";
+                    Log::warning('Gemini: koneksi gagal, mencoba model berikutnya', ['key' => $index + 1, 'model' => $model]);
 
-                continue;
+                    continue;
+                }
+
+                if ($response->successful()) {
+                    return new AiResult($this->parse($response), $this->name(), $model);
+                }
+
+                $outcome = $this->handleFailure($response, $index, $model);
+                $lastReason = $outcome['reason'];
+
+                if ($outcome['next'] === 'key') {
+                    break; // key ini tidak bisa dipakai sekarang; coba key berikutnya
+                }
             }
-
-            if ($response->successful()) {
-                return new AiResult($this->parse($response), $this->name(), $this->model);
-            }
-
-            $lastReason = $this->handleFailure($response, $index);
         }
 
-        throw new AiUnavailableException("Semua API key Gemini gagal ({$lastReason}).");
+        throw new AiUnavailableException("Semua API key dan model Gemini gagal ({$lastReason}).");
     }
 
     /**
@@ -89,17 +104,29 @@ final class GeminiProvider implements AiProvider
         return array_map(fn (string $key) => $this->keyId($key), $this->keys);
     }
 
-    /** Cek satu key terhadap model yang dikonfigurasi. Mengembalikan kode HTTP, atau 0 bila koneksi gagal. */
-    public function probe(int $index): int
+    /**
+     * Cek satu key dengan permintaan generate sungguhan yang sangat kecil. Daftar model saja tidak cukup:
+     * model yang sudah dipensiunkan masih tampil di daftar tetapi menolak generate (404).
+     *
+     * @return array{status: int, message: ?string} status 0 bila koneksi gagal; message dari Google bila gagal
+     */
+    public function probe(int $index, string $model): array
     {
         try {
-            return Http::withHeaders(['x-goog-api-key' => $this->keys[$index]])
+            $response = Http::withHeaders(['x-goog-api-key' => $this->keys[$index]])
                 ->timeout($this->timeoutSeconds)
-                ->get(self::ENDPOINT."/models/{$this->model}")
-                ->status();
+                ->post(self::ENDPOINT."/models/{$model}:generateContent", [
+                    'contents' => [['role' => 'user', 'parts' => [['text' => 'Balas dengan kata: ok']]]],
+                    'generationConfig' => ['maxOutputTokens' => 16],
+                ]);
         } catch (ConnectionException) {
-            return 0;
+            return ['status' => 0, 'message' => null];
         }
+
+        return [
+            'status' => $response->status(),
+            'message' => $response->successful() ? null : str($response->json('error.message') ?? '')->limit(200)->toString(),
+        ];
     }
 
     public function isCoolingDown(int $index): bool
@@ -113,8 +140,12 @@ final class GeminiProvider implements AiProvider
         return array_filter($this->keys, fn (string $key) => ! $this->cache->has($this->cooldownKey($key)), ARRAY_FILTER_USE_BOTH);
     }
 
-    /** Menentukan nasib key setelah gagal dan mengembalikan alasan singkat untuk pesan error. */
-    private function handleFailure(Response $response, int $index): string
+    /**
+     * Menentukan nasib key atau model setelah gagal.
+     *
+     * @return array{reason: string, next: 'model'|'key'} next = lanjut ke model berikutnya, atau ke key berikutnya
+     */
+    private function handleFailure(Response $response, int $index, string $model): array
     {
         $status = $response->status();
         $key = $this->keys[$index];
@@ -123,7 +154,7 @@ final class GeminiProvider implements AiProvider
             $this->cache->put($this->cooldownKey($key), true, $this->cooldownSeconds);
             Log::warning('Gemini: key kena limit, diistirahatkan', ['key' => $index + 1, 'detik' => $this->cooldownSeconds]);
 
-            return 'kuota habis (429)';
+            return ['reason' => 'kuota habis (429)', 'next' => 'key'];
         }
 
         // 401/403 = key tidak punya izin. 400 dengan API_KEY_INVALID = key salah. Keduanya urusan key, bukan isi permintaan.
@@ -131,19 +162,21 @@ final class GeminiProvider implements AiProvider
             $this->cache->put($this->cooldownKey($key), true, self::REJECTED_KEY_COOLDOWN_SECONDS);
             Log::error('Gemini: key ditolak, diistirahatkan', ['key' => $index + 1, 'status' => $status]);
 
-            return "key ditolak ({$status})";
+            return ['reason' => "key ditolak ({$status})", 'next' => 'key'];
         }
 
-        if ($status >= 500) {
-            Log::warning('Gemini: server bermasalah, mencoba key berikutnya', ['status' => $status]);
+        // 404 = model sudah dipensiunkan atau tidak tersedia untuk akun ini. 5xx = Google sedang sibuk.
+        // Keduanya urusan model, jadi model berikutnya yang dicoba (dengan key yang sama).
+        if ($status === 404 || $status >= 500) {
+            Log::warning('Gemini: model tidak bisa dipakai, mencoba model berikutnya', ['model' => $model, 'status' => $status]);
 
-            return "server Gemini bermasalah ({$status})";
+            return ['reason' => "{$model} tidak bisa dipakai ({$status})", 'next' => 'model'];
         }
 
-        // Selain itu (mis. skema atau model salah): key lain tidak akan membantu.
-        Log::error('Gemini menolak permintaan', ['status' => $status, 'body' => str($response->body())->limit(300)->toString()]);
+        // Selain itu (mis. skema salah): model atau key lain tidak akan membantu.
+        Log::error('Gemini menolak permintaan', ['model' => $model, 'status' => $status, 'body' => str($response->body())->limit(300)->toString()]);
 
-        throw new AiInvalidResponseException("Gemini menolak permintaan (HTTP {$status}). Periksa GEMINI_MODEL dan skema.");
+        throw new AiInvalidResponseException("Gemini menolak permintaan (HTTP {$status}). Periksa skema permintaan.");
     }
 
     /** @return array<string, mixed> */

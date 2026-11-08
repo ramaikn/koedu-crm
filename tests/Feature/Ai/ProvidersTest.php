@@ -34,7 +34,7 @@ class ProvidersTest extends TestCase
 
     private function gemini(array $keys = ['key-a', 'key-b']): GeminiProvider
     {
-        return new GeminiProvider($keys, 'gemini-test', 5, 60, Cache::store('array'));
+        return new GeminiProvider($keys, ['gemini-test'], 5, 60, Cache::store('array'));
     }
 
     private function geminiAnswer(array $data = ['ok' => true]): array
@@ -151,7 +151,7 @@ class ProvidersTest extends TestCase
             $this->gemini()->generateJson('s', 'p', self::SCHEMA);
             $this->fail('Seharusnya ditolak.');
         } catch (AiInvalidResponseException $e) {
-            $this->assertStringContainsString('GEMINI_MODEL', $e->getMessage());
+            $this->assertStringContainsString('Periksa skema', $e->getMessage());
         }
 
         $this->assertSame(['key-a'], $this->usedKeys());
@@ -184,6 +184,69 @@ class ProvidersTest extends TestCase
         Http::fake(['*' => Http::response(['candidates' => [['content' => ['parts' => [['text' => 'bukan json']]]]]])]);
         $this->expectException(AiInvalidResponseException::class);
         $this->gemini()->generateJson('s', 'p', self::SCHEMA);
+    }
+
+    private function usedModels(): array
+    {
+        return Http::recorded()->map(fn (array $pair) => preg_match('#/models/([^:]+):#', $pair[0]->url(), $m) ? $m[1] : '?')->values()->all();
+    }
+
+    public function test_busy_or_retired_model_falls_back_to_the_next_model_with_the_same_key(): void
+    {
+        foreach ([503, 404] as $status) {
+            Http::fake(fn (Request $r) => str_contains($r->url(), '/models/m1:') ? Http::response([], $status) : Http::response($this->geminiAnswer()));
+            $provider = new GeminiProvider(['key-a', 'key-b'], ['m1', 'm2'], 5, 60, Cache::store('array'));
+
+            $result = $provider->generateJson('s', 'p', self::SCHEMA);
+
+            $this->assertSame('m2', $result->model, "HTTP {$status}");
+            $this->assertSame(['m1', 'm2'], $this->usedModels());
+            $this->assertSame(['key-a', 'key-a'], $this->usedKeys(), 'key yang sama dipakai, key tidak diistirahatkan');
+            $this->assertFalse($provider->isCoolingDown(0));
+        }
+    }
+
+    public function test_when_every_model_fails_the_next_key_is_tried_and_rate_limit_skips_remaining_models(): void
+    {
+        Http::fake(fn (Request $r) => $r->hasHeader('x-goog-api-key', 'key-a') ? Http::response([], 503) : Http::response($this->geminiAnswer()));
+        $provider = new GeminiProvider(['key-a', 'key-b'], ['m1', 'm2'], 5, 60, Cache::store('array'));
+
+        $this->assertSame(['ok' => true], $provider->generateJson('s', 'p', self::SCHEMA)->data);
+        $this->assertSame(['key-a', 'key-a', 'key-b'], $this->usedKeys());
+        $this->assertSame(['m1', 'm2', 'm1'], $this->usedModels());
+    }
+
+    public function test_rate_limit_skips_the_remaining_models_and_moves_to_the_next_key(): void
+    {
+        Http::fake(fn (Request $r) => $r->hasHeader('x-goog-api-key', 'key-a') ? Http::response([], 429) : Http::response($this->geminiAnswer()));
+        $provider = new GeminiProvider(['key-a', 'key-b'], ['m1', 'm2'], 5, 60, Cache::store('array'));
+
+        $provider->generateJson('s', 'p', self::SCHEMA);
+
+        $this->assertSame(['key-a', 'key-b'], $this->usedKeys());
+        $this->assertSame(['m1', 'm1'], $this->usedModels(), '429 adalah urusan key: model sisa tidak dicoba dengan key yang sama');
+        $this->assertTrue($provider->isCoolingDown(0));
+    }
+
+    public function test_no_models_configured_is_unavailable(): void
+    {
+        $this->expectException(AiUnavailableException::class);
+        (new GeminiProvider(['key-a'], [], 5, 60, Cache::store('array')))->generateJson('s', 'p', self::SCHEMA);
+    }
+
+    public function test_probe_does_a_real_generate_call_and_reports_googles_reason(): void
+    {
+        Http::fake(fn (Request $r) => $r->hasHeader('x-goog-api-key', 'key-a')
+            ? Http::response(['error' => ['message' => 'This model is no longer available to new users.']], 404)
+            : Http::response($this->geminiAnswer()));
+        $provider = $this->gemini();
+
+        $failed = $provider->probe(0, 'gemini-test');
+        $this->assertSame(404, $failed['status']);
+        $this->assertStringContainsString('no longer available', $failed['message']);
+        $this->assertSame(['status' => 200, 'message' => null], $provider->probe(1, 'gemini-test'));
+
+        Http::assertSent(fn (Request $r) => str_ends_with($r->url(), ':generateContent') && $r['generationConfig']['maxOutputTokens'] === 16);
     }
 
     public function test_no_keys_is_unavailable_and_key_ids_hide_the_key(): void
