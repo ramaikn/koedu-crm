@@ -38,6 +38,16 @@ class CloudApiDriverTest extends TestCase
         $this->assertSame('[Pesan image]', $image->body);
     }
 
+    public function test_sent_time_is_in_app_timezone(): void
+    {
+        config(['app.timezone' => 'Asia/Makassar']);
+
+        [$text] = $this->driver()->parseWebhook($this->metaPayload());
+
+        $this->assertSame('Asia/Makassar', $text->sentAt->timezoneName);
+        $this->assertSame('2025-11-08 19:06:40', $text->sentAt->format('Y-m-d H:i:s'));
+    }
+
     public function test_status_only_webhook_yields_no_messages(): void
     {
         $payload = ['entry' => [['changes' => [['value' => ['statuses' => [['id' => 'wamid.1', 'status' => 'read']]]]]]]];

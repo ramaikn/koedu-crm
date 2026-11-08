@@ -79,7 +79,7 @@ final class CloudApiDriver implements WhatsAppProvider
                         displayName: $names[$from] ?? null,
                         type: $type === 'text' ? 'text' : 'media',
                         body: $type === 'text' ? ($message['text']['body'] ?? null) : "[Pesan {$type}]",
-                        sentAt: CarbonImmutable::createFromTimestamp((int) ($message['timestamp'] ?? time())),
+                        sentAt: CarbonImmutable::createFromTimestamp((int) ($message['timestamp'] ?? time()), config('app.timezone')),
                         provider: $this->name(),
                     );
                 }

@@ -27,6 +27,7 @@ export interface NavItem {
 
 export interface SharedData {
     name: string;
+    timezone: string;
     quote: { message: string; author: string };
     auth: Auth;
     [key: string]: unknown;

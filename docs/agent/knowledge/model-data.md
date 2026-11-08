@@ -21,6 +21,8 @@ Enum ada di `app/Enums` (nilai disimpan sebagai string). `BenefitType` membedaka
 - `CreateEnrollment`: masa aktif inklusif (paket 30 hari mulai 1 Nov berakhir 30 Nov).
 - `CompleteConsultation`: absensi + potong kuota `benefit_type` peserta. Tidak memotong dua kali (`quota_deducted_at`) dan tidak melebihi total. Client yang tidak hadir tidak dipotong, kecuali `QUOTA_DEDUCT_ON_ABSENT=true`.
 - Zona waktu aplikasi dan sesi Postgres sama-sama `APP_TIMEZONE` (Asia/Makassar).
+- Kolom `timestamp` (mis. `sent_at`, `last_message_at`) tidak menyimpan zona. Laravel menulis jam dinding dari zona milik objek Carbon-nya. Carbon yang dibuat dari epoch (`createFromTimestamp`) berzona UTC, jadi harus dibuat dengan `config('app.timezone')`, kalau tidak jamnya bergeser 8 jam. Kolom `timestampTz` (sesi konsultasi) aman.
+- Jam di layar diformat dengan zona waktu kantor dari props bersama `timezone` (`resources/js/lib/datetime.ts`), bukan zona waktu browser.
 
 ## Hak akses (Policy di `app/Policies`, middleware `role:...`)
 | Data | Director | Admin | Tutor |

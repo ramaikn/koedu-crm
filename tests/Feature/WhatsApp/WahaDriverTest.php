@@ -44,6 +44,17 @@ class WahaDriverTest extends TestCase
         $this->assertSame('waha', $msg->provider);
     }
 
+    public function test_sent_time_is_in_app_timezone_so_stored_wall_clock_is_correct(): void
+    {
+        config(['app.timezone' => 'Asia/Makassar']);
+
+        [$msg] = $this->driver()->parseWebhook($this->webhook());
+
+        // 1_762_600_000 = 2025-11-08 11:06:40 UTC = 19:06:40 WITA. Jam dinding yang disimpan harus WITA.
+        $this->assertSame('Asia/Makassar', $msg->sentAt->timezoneName);
+        $this->assertSame('2025-11-08 19:06:40', $msg->sentAt->format('Y-m-d H:i:s'));
+    }
+
     public function test_ignores_non_message_events_own_messages_groups_and_status(): void
     {
         $driver = $this->driver();

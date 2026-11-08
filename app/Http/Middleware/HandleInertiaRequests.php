@@ -41,6 +41,8 @@ class HandleInertiaRequests extends Middleware
         return array_merge(parent::share($request), [
             ...parent::share($request),
             'name' => config('app.name'),
+            // Semua jam di layar mengikuti zona waktu kantor, bukan zona waktu browser pengguna.
+            'timezone' => config('app.timezone'),
             'quote' => ['message' => trim($message), 'author' => trim($author)],
             'auth' => [
                 'user' => $request->user(),

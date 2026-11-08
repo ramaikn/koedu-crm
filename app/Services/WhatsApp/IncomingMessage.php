@@ -14,6 +14,10 @@ final readonly class IncomingMessage
         public ?string $displayName,
         public string $type,
         public ?string $body,
+        /**
+         * Waktu kirim dalam zona waktu aplikasi. Kolom timestamp di database tidak menyimpan zona,
+         * jadi nilai dalam UTC akan terbaca bergeser sebesar selisih zona (8 jam untuk WITA).
+         */
         public CarbonImmutable $sentAt,
         public string $provider,
     ) {}

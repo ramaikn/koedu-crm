@@ -74,7 +74,7 @@ final class WahaDriver implements WhatsAppProvider
             displayName: $message['_data']['Info']['PushName'] ?? $message['_data']['notifyName'] ?? null,
             type: $hasMedia ? 'media' : 'text',
             body: ($body === null || $body === '') && $hasMedia ? '[Pesan media]' : $body,
-            sentAt: CarbonImmutable::createFromTimestamp((int) ($message['timestamp'] ?? time())),
+            sentAt: CarbonImmutable::createFromTimestamp((int) ($message['timestamp'] ?? time()), config('app.timezone')),
             provider: $this->name(),
         )];
     }

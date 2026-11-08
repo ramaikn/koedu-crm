@@ -1,9 +1,10 @@
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import AppLayout from '@/layouts/app-layout';
+import { formatListTime, formatTime } from '@/lib/datetime';
 import { cn } from '@/lib/utils';
-import { type BreadcrumbItem } from '@/types';
-import { Head, Link, router, useForm } from '@inertiajs/react';
+import { type BreadcrumbItem, type SharedData } from '@/types';
+import { Head, Link, router, useForm, usePage } from '@inertiajs/react';
 import { ArrowLeft, MessageCircle, Send } from 'lucide-react';
 import { FormEvent, useEffect, useRef } from 'react';
 
@@ -45,16 +46,9 @@ const breadcrumbs: BreadcrumbItem[] = [{ title: 'Inbox WhatsApp', href: '/inbox'
 
 const REFRESH_MS = 5000;
 
-const timeFormat = new Intl.DateTimeFormat('id-ID', { hour: '2-digit', minute: '2-digit' });
-const dateFormat = new Intl.DateTimeFormat('id-ID', { day: 'numeric', month: 'short' });
-
-function formatListTime(iso: string | null): string {
-    if (!iso) return '';
-    const date = new Date(iso);
-    return date.toDateString() === new Date().toDateString() ? timeFormat.format(date) : dateFormat.format(date);
-}
-
 export default function Inbox({ conversations, active, can_reply }: Props) {
+    const { timezone } = usePage<SharedData>().props;
+
     // Muat ulang daftar dan chat tiap beberapa detik selama tab terbuka, supaya pesan baru muncul sendiri.
     useEffect(() => {
         const timer = setInterval(() => {
@@ -91,7 +85,7 @@ export default function Inbox({ conversations, active, can_reply }: Props) {
                                 >
                                     <div className="flex items-center justify-between gap-2">
                                         <span className="truncate font-medium">{c.name}</span>
-                                        <span className="text-muted-foreground shrink-0 text-xs">{formatListTime(c.last_message_at)}</span>
+                                        <span className="text-muted-foreground shrink-0 text-xs">{formatListTime(c.last_message_at, timezone)}</span>
                                     </div>
                                     <div className="flex items-center justify-between gap-2">
                                         <span className="text-muted-foreground truncate text-xs">{c.preview}</span>
@@ -126,6 +120,7 @@ function EmptyThread() {
 }
 
 function Thread({ active, canReply }: { active: ActiveConversation; canReply: boolean }) {
+    const { timezone } = usePage<SharedData>().props;
     const { data, setData, post, processing, reset, errors } = useForm({ body: '' });
     const bottomRef = useRef<HTMLDivElement>(null);
     const lastId = active.messages.at(-1)?.id;
@@ -170,7 +165,7 @@ function Thread({ active, canReply }: { active: ActiveConversation; canReply: bo
                                 )}
                             >
                                 {m.direction === 'outbound' && <span>{m.status_label}</span>}
-                                <span>{timeFormat.format(new Date(m.at))}</span>
+                                <span>{formatTime(m.at, timezone)}</span>
                             </div>
                             {m.status === 'failed' && <p className="mt-1 text-xs font-medium text-red-200">Gagal terkirim. Coba kirim ulang nanti.</p>}
                         </div>
