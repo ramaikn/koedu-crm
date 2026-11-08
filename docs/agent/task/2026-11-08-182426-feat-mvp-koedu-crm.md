@@ -15,13 +15,14 @@ Acuan: [kebutuhan-bisnis.md](../knowledge/kebutuhan-bisnis.md), [arsitektur.md](
 8. [x] Log aplikasi ke `logs/` (level info/warn/error)
 
 ## Data dan role
-9. [ ] Migrasi: users (role), clients, tutors (bidang, jenjang, jam tersedia), packages, package_benefits, enrollments, enrollment_quotas, payments, sessions, session_participants, wa_conversations, wa_messages, schedule_drafts
-10. [ ] Policy role: director, admin, tutor
-11. [ ] Seeder: katalog paket generik, 65 tutor (ejaan nama diubah, WA fiktif), client contoh
+9. [x] Migrasi: users (role), clients, tutors (bidang, jenjang, jam tersedia), packages, package_benefits, enrollments (pembayaran digabung, tanpa DP), enrollment_quotas, consultations, consultation_participants, wa_conversations, wa_messages, schedule_drafts
+10. [x] Policy role: director, admin, tutor + middleware `role:`; registrasi publik ditutup, akun nonaktif ditolak login
+11. [x] Seeder: katalog paket generik, 65 tutor (ejaan nama diubah, WA fiktif), client contoh
+11a. [x] Tutup fitur hapus akun sendiri di halaman Settings bawaan starter kit (akun hanya dikelola director)
 
 ## Fitur
 12. [ ] CRUD client, tutor, paket, enrollment, pembayaran (lunas/belum, bukti transfer)
-13. [ ] Jadwal: sesi privat dan grup (kapasitas 20), cek bentrok tutor, absensi, potong kuota saat selesai
+13. [ ] (berjalan) Jadwal: sesi privat dan grup (kapasitas 20), cek bentrok tutor, absensi, potong kuota saat selesai. Sudah: `CompleteConsultation` (absensi + potong kuota). Belum: buat/ubah jadwal + cek bentrok
 14. [ ] Saran tutor: skor dari bidang, jenjang, jam kosong, beban kerja
 15. [ ] Adapter `WhatsAppProvider` (driver waha, cloud_api) + inbox WA (baca, balas)
 16. [ ] Adapter `AiProvider` (driver gemini, rotasi key saat 429, fallback provider) + draf jadwal dari chat

@@ -95,6 +95,9 @@ return [
             'prefix_indexes' => true,
             'search_path' => 'public',
             'sslmode' => 'prefer',
+            // Samakan zona waktu sesi Postgres dengan aplikasi. Tanpa ini jam sesi (timestamptz)
+            // dibaca Postgres sebagai UTC dan bergeser 8 jam.
+            'timezone' => env('APP_TIMEZONE', 'UTC'),
         ],
 
         'sqlsrv' => [

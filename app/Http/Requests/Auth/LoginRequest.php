@@ -41,7 +41,11 @@ class LoginRequest extends FormRequest
     {
         $this->ensureIsNotRateLimited();
 
-        if (! Auth::attempt($this->only('email', 'password'), $this->boolean('remember'))) {
+        // Akun yang dinonaktifkan director tidak bisa login, dengan pesan yang sama seperti
+        // password salah supaya status akun tidak bocor.
+        $credentials = [...$this->only('email', 'password'), 'is_active' => true];
+
+        if (! Auth::attempt($credentials, $this->boolean('remember'))) {
             RateLimiter::hit($this->throttleKey());
 
             throw ValidationException::withMessages([
