@@ -47,6 +47,10 @@ class HandleInertiaRequests extends Middleware
             'auth' => [
                 'user' => $request->user(),
             ],
+            // Pesan sukses sekali tampil (mis. "Jadwal dibuat.") dari ->with('success', ...).
+            'flash' => [
+                'success' => fn () => $request->session()->get('success'),
+            ],
         ]);
     }
 }

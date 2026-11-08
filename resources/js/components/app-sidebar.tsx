@@ -3,21 +3,16 @@ import { NavUser } from '@/components/nav-user';
 import { Sidebar, SidebarContent, SidebarFooter, SidebarHeader, SidebarMenu, SidebarMenuButton, SidebarMenuItem } from '@/components/ui/sidebar';
 import { type NavItem, type SharedData } from '@/types';
 import { Link, usePage } from '@inertiajs/react';
-import { LayoutGrid, MessageCircle } from 'lucide-react';
+import { CalendarDays, GraduationCap, LayoutGrid, MessageCircle, Package, Users } from 'lucide-react';
 import AppLogo from './app-logo';
 
 const mainNavItems: NavItem[] = [
-    {
-        title: 'Dashboard',
-        url: '/dashboard',
-        icon: LayoutGrid,
-    },
-    {
-        title: 'Inbox WhatsApp',
-        url: '/inbox',
-        icon: MessageCircle,
-        roles: ['admin', 'director'],
-    },
+    { title: 'Dashboard', url: '/dashboard', icon: LayoutGrid },
+    { title: 'Jadwal', url: '/schedule', icon: CalendarDays },
+    { title: 'Client', url: '/clients', icon: Users },
+    { title: 'Tutor', url: '/tutors', icon: GraduationCap, roles: ['admin', 'director'] },
+    { title: 'Paket', url: '/packages', icon: Package, roles: ['admin', 'director'] },
+    { title: 'Inbox WhatsApp', url: '/inbox', icon: MessageCircle, roles: ['admin', 'director'] },
 ];
 
 export function AppSidebar() {

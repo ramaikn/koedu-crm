@@ -21,16 +21,19 @@ Acuan: [kebutuhan-bisnis.md](../knowledge/kebutuhan-bisnis.md), [arsitektur.md](
 11a. [x] Tutup fitur hapus akun sendiri di halaman Settings bawaan starter kit (akun hanya dikelola director)
 
 ## Fitur
-12. [ ] CRUD client, tutor, paket, enrollment, pembayaran (lunas/belum, bukti transfer)
-13. [ ] (berjalan) Jadwal: sesi privat dan grup (kapasitas 20), cek bentrok tutor, absensi, potong kuota saat selesai. Sudah: `CompleteConsultation` (absensi + potong kuota). Belum: buat/ubah jadwal + cek bentrok
-14. [ ] Saran tutor: skor dari bidang, jenjang, jam kosong, beban kerja
+12. [x] CRUD client, tutor, paket (katalog), paket client (enrollment), pembayaran lunas dengan bukti bayar, koreksi kuota manual
+12a. [ ] Kelola pengguna (director): buat akun admin/tutor, atur role, nonaktifkan, tautkan akun ke profil tutor. Saat ini akun hanya dibuat lewat seeder
+12b. [ ] Tutor mengubah jam tersedianya sendiri (policy `updateAvailability` sudah ada, halamannya belum)
+12c. [ ] Command terjadwal: paket yang lewat `ends_on` otomatis berstatus `expired`
+13. [x] Jadwal: sesi privat dan grup (kapasitas), cek bentrok tutor dan client, peringatan jam/batas sesi/kuota/pembayaran, absensi, potong kuota saat selesai, ubah, batal
+14. [x] Saran tutor: skor dari bidang, jenjang, pembimbing saat ini, jam tersedia, beban minggu itu, dengan alasan per tutor
 15. [x] Adapter `WhatsAppProvider` (driver waha, cloud_api) + inbox WA (baca, balas). Template WA resmi (di luar 24 jam) belum ada
 16. [ ] Adapter `AiProvider` (driver gemini, rotasi key saat 429, fallback provider) + draf jadwal dari chat
 17. [ ] `SheetSync` lewat queue ke Google Sheets
 18. [ ] (berjalan) API untuk n8n (token): webhook WA masuk (sudah), daftar reminder jatuh tempo, tandai terkirim (belum)
 19. [ ] (berjalan) Workflow n8n (JSON di repo). Sudah: WA masuk ke Laravel. Belum: notif tutor saat jadwal disetujui, reminder H-1 dan 1 jam, paket hampir habis, pembayaran belum lunas
-20. [ ] Dashboard director: client baru, sesi per tutor, selesai/batal, pendapatan per bulan
-21. [ ] Halaman tutor: jadwal saya, catatan sesi
+20. [ ] (berjalan) Dashboard director. Sudah: ringkasan harian (sesi hari ini, belum lunas, chat belum dibaca, client baru, paket hampir berakhir). Belum: grafik client baru, sesi per tutor, selesai/batal, pendapatan per bulan
+21. [x] Halaman tutor: jadwal saya (daftar per hari), detail sesi, selesaikan sesi dengan absensi dan catatan
 
 ## Verifikasi
 22. [ ] Unit test alur kritis: cek bentrok, potong kuota, saran tutor, rotasi key AI, parse webhook WA

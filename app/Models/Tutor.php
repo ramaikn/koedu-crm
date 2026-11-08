@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Enums\DegreeLevel;
+use Carbon\CarbonInterface;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -57,6 +58,25 @@ class Tutor extends Model
     public function enrollments(): HasMany
     {
         return $this->hasMany(Enrollment::class, 'primary_tutor_id');
+    }
+
+    /**
+     * Apakah rentang waktu ini seluruhnya berada di dalam satu jam tersedia tutor pada hari itu.
+     * Relasi availabilities harus sudah dimuat. Jam dibandingkan dalam format H:i supaya tidak
+     * bergantung pada ada tidaknya detik di nilai kolom time.
+     */
+    public function isAvailableBetween(CarbonInterface $start, CarbonInterface $end): bool
+    {
+        if (! $start->isSameDay($end)) {
+            return false;
+        }
+
+        $from = $start->format('H:i');
+        $to = $end->format('H:i');
+
+        return $this->availabilities
+            ->where('day_of_week', $start->dayOfWeekIso)
+            ->contains(fn (TutorAvailability $slot) => substr($slot->start_time, 0, 5) <= $from && substr($slot->end_time, 0, 5) >= $to);
     }
 
     public function scopeActive(Builder $query): Builder

@@ -67,6 +67,26 @@ class Client extends Model
         return $this->hasOne(WaConversation::class);
     }
 
+    /**
+     * Pencarian bebas: nama, email, universitas, atau nomor WA (format lokal 0812.. juga cocok dengan 62812..).
+     * Nomor hanya dicari bila yang diketik berisi minimal 3 angka, supaya kata biasa tidak cocok dengan semua nomor.
+     */
+    public function scopeMatching(Builder $query, string $term): Builder
+    {
+        $like = '%'.mb_strtolower(trim($term)).'%';
+        $digits = preg_replace('/\D+/', '', $term) ?? '';
+
+        return $query->where(function (Builder $w) use ($like, $digits) {
+            $w->whereRaw('lower(name) like ?', [$like])
+                ->orWhereRaw("lower(coalesce(email, '')) like ?", [$like])
+                ->orWhereRaw("lower(coalesce(university, '')) like ?", [$like]);
+
+            if (strlen($digits) >= 3) {
+                $w->orWhere('phone', 'like', '%'.PhoneNumber::normalize($digits).'%');
+            }
+        });
+    }
+
     /** Client yang pernah atau sedang dibimbing oleh tutor tertentu. */
     public function scopeHandledByTutor(Builder $query, Tutor $tutor): Builder
     {
