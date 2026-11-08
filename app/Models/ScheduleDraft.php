@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Enums\DraftStatus;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasOne;
@@ -29,6 +30,11 @@ class ScheduleDraft extends Model
             'extracted' => 'array',
             'reviewed_at' => 'datetime',
         ];
+    }
+
+    public function scopePending(Builder $query): Builder
+    {
+        return $query->where('status', DraftStatus::Pending);
     }
 
     public function conversation(): BelongsTo

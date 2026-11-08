@@ -24,13 +24,29 @@ return [
     ],
 
     'ai' => [
+        // Saklar utama. Walau true, AI baru aktif bila ada API key untuk salah satu provider (lihat AiAvailability).
+        'enabled' => (bool) env('AI_ENABLED', true),
         // Urutan provider. Provider berikutnya dipakai bila semua key provider sebelumnya gagal/limit.
-        'providers' => array_filter(array_map('trim', explode(',', (string) env('AI_PROVIDERS', 'gemini')))),
+        'providers' => array_values(array_filter(array_map('trim', explode(',', (string) env('AI_PROVIDERS', 'gemini'))))),
         'timeout' => (int) env('AI_TIMEOUT_SECONDS', 20),
         'gemini' => [
             'keys' => array_values(array_filter(array_map('trim', explode(',', (string) env('GEMINI_API_KEYS', ''))))),
             'model' => env('GEMINI_MODEL', 'gemini-2.5-flash'),
             'key_cooldown' => (int) env('GEMINI_KEY_COOLDOWN_SECONDS', 60),
+        ],
+        // Provider cadangan yang kompatibel dengan format OpenAI (OpenAI, OpenRouter, Groq, model lokal, dan lainnya).
+        'openai' => [
+            'base_url' => rtrim((string) env('AI_OPENAI_BASE_URL', 'https://api.openai.com/v1'), '/'),
+            'key' => env('AI_OPENAI_API_KEY'),
+            'model' => env('AI_OPENAI_MODEL', 'gpt-4o-mini'),
+        ],
+        'extraction' => [
+            // Draf jadwal hanya dibuat bila AI yakin chat itu permintaan jadwal sebesar nilai ini atau lebih (0-1).
+            'min_confidence' => (float) env('AI_MIN_CONFIDENCE', 0.6),
+            // Jumlah pesan terakhir dalam percakapan yang dibaca AI sebagai konteks.
+            'context_messages' => (int) env('AI_CONTEXT_MESSAGES', 8),
+            // Pengaman biaya: batas panggilan AI per percakapan per jam.
+            'max_calls_per_hour' => (int) env('AI_MAX_CALLS_PER_CONVERSATION_HOUR', 20),
         ],
     ],
 

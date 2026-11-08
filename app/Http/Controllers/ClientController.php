@@ -64,11 +64,19 @@ class ClientController extends Controller
         ]);
     }
 
-    public function create(): Response
+    public function create(Request $request): Response
     {
         Gate::authorize('create', Client::class);
 
-        return Inertia::render('clients/form', ['client' => null, ...$this->formOptions()]);
+        // Isian awal dari draf AI di inbox (nomor dan nama dari chat). Hanya nilai yang masuk akal yang dipakai.
+        $query = $request->validate([
+            'name' => ['nullable', 'string', 'max:255'],
+            'phone' => ['nullable', 'string', 'max:20'],
+            'degree_level' => ['nullable', 'in:'.implode(',', DegreeLevel::values())],
+            'study_program' => ['nullable', 'string', 'max:255'],
+        ]);
+
+        return Inertia::render('clients/form', ['client' => null, 'prefill' => $query, ...$this->formOptions()]);
     }
 
     public function store(ClientRequest $request): RedirectResponse

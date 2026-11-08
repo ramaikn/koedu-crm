@@ -3,7 +3,9 @@
 namespace App\Actions\Consultations;
 
 use App\Enums\ConsultationStatus;
+use App\Enums\DraftStatus;
 use App\Models\Consultation;
+use App\Models\ScheduleDraft;
 use App\Models\Tutor;
 use App\Models\User;
 use App\Services\Scheduling\EnrollmentResolver;
@@ -49,8 +51,12 @@ final class ScheduleConsultation
                 throw ValidationException::withMessages(['confirm_warnings' => 'Ada peringatan yang perlu dikonfirmasi dulu.']);
             }
 
+            // Draf dikunci dan dicek sebelum jadwal dibuat: draf yang sudah diproses admin lain tidak boleh dipakai lagi.
+            $draft = $this->lockPendingDraft($input, $existing);
+
             $consultation = $existing === null ? $this->create($input, $by) : $this->update($existing, $input);
             $this->syncParticipants($consultation, $input);
+            $this->approveDraft($draft, $input, $by);
 
             Log::info($existing === null ? 'Sesi dibuat' : 'Sesi diubah', [
                 'consultation_id' => $consultation->id,
@@ -61,6 +67,31 @@ final class ScheduleConsultation
 
             return $consultation->load('participants');
         });
+    }
+
+    private function lockPendingDraft(ScheduleInput $input, ?Consultation $existing): ?ScheduleDraft
+    {
+        // Draf hanya relevan saat membuat jadwal baru. Mengubah jadwal yang sudah ada tidak menyentuh draf.
+        if ($input->scheduleDraftId === null || $existing !== null) {
+            return null;
+        }
+
+        $draft = ScheduleDraft::lockForUpdate()->find($input->scheduleDraftId);
+        if ($draft === null || $draft->status !== DraftStatus::Pending) {
+            throw ValidationException::withMessages(['schedule' => 'Draf jadwal ini sudah diproses admin lain.']);
+        }
+
+        return $draft;
+    }
+
+    private function approveDraft(?ScheduleDraft $draft, ScheduleInput $input, User $by): void
+    {
+        $draft?->update([
+            'status' => DraftStatus::Approved,
+            'client_id' => $draft->client_id ?? ($input->uniqueClientIds()[0] ?? null),
+            'reviewed_by' => $by->id,
+            'reviewed_at' => now(),
+        ]);
     }
 
     private function create(ScheduleInput $input, User $by): Consultation

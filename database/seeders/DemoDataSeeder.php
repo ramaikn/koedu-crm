@@ -265,14 +265,19 @@ class DemoDataSeeder extends Seeder
                 'status' => DraftStatus::Pending,
                 'ai_provider' => 'gemini',
                 'ai_model' => 'demo',
+                // Bentuk yang sama dengan hasil UpsertScheduleDraft dari pembacaan AI.
                 'extracted' => [
                     'client_name' => $client->name,
                     'degree_level' => $client->degree_level?->value,
-                    'expertise_field' => 'Manajemen',
-                    'service' => 'Privat Olah Data (SmartPLS)',
-                    'requested_start' => $nextSaturday->toIso8601String(),
-                    'notes' => 'Minta sesi Sabtu pagi.',
+                    'field_of_study' => 'Manajemen',
+                    'service_note' => 'Olah data SmartPLS',
+                    'requested_date' => $nextSaturday->toDateString(),
+                    'requested_time' => '10:00',
+                    'duration_minutes' => 60,
+                    'session_type' => 'private',
+                    'summary' => 'Client minta sesi olah data SmartPLS hari Sabtu jam 10 pagi.',
                     'confidence' => 0.86,
+                    'source_message_ids' => [$inbound->id],
                 ],
             ]);
         }

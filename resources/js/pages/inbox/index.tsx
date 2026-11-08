@@ -1,18 +1,39 @@
+import { ConfirmDialog } from '@/components/confirm-dialog';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import AppLayout from '@/layouts/app-layout';
-import { formatListTime, formatTime } from '@/lib/datetime';
+import { formatDayHeading, formatListTime, formatTime } from '@/lib/datetime';
 import { cn } from '@/lib/utils';
 import { type BreadcrumbItem, type SharedData } from '@/types';
 import { Head, Link, router, useForm, usePage } from '@inertiajs/react';
-import { ArrowLeft, MessageCircle, Send } from 'lucide-react';
+import { ArrowLeft, CalendarPlus, MessageCircle, Send, UserPlus } from 'lucide-react';
 import { FormEvent, useEffect, useRef } from 'react';
+
+interface DraftFields {
+    client_name: string | null;
+    degree_level: string | null;
+    field_of_study: string | null;
+    service_note: string | null;
+    requested_date: string | null;
+    requested_time: string | null;
+    duration_minutes: number | null;
+    session_type: string | null;
+}
+
+interface Draft {
+    id: number;
+    summary: string;
+    confidence: number | null;
+    fields: DraftFields;
+    client_registered: boolean;
+}
 
 interface ConversationItem {
     id: number;
     name: string;
     phone: string;
     is_client: boolean;
+    has_draft: boolean;
     unread_count: number;
     last_message_at: string | null;
     preview: string;
@@ -33,6 +54,7 @@ interface ActiveConversation {
     name: string;
     phone: string;
     client_id: number | null;
+    draft: Draft | null;
     messages: MessageItem[];
 }
 
@@ -84,7 +106,14 @@ export default function Inbox({ conversations, active, can_reply }: Props) {
                                     )}
                                 >
                                     <div className="flex items-center justify-between gap-2">
-                                        <span className="truncate font-medium">{c.name}</span>
+                                        <span className="flex min-w-0 items-center gap-2">
+                                            <span className="truncate font-medium">{c.name}</span>
+                                            {c.has_draft && (
+                                                <Badge variant="secondary" className="shrink-0 px-1.5 py-0 text-[10px]">
+                                                    Draf jadwal
+                                                </Badge>
+                                            )}
+                                        </span>
                                         <span className="text-muted-foreground shrink-0 text-xs">{formatListTime(c.last_message_at, timezone)}</span>
                                     </div>
                                     <div className="flex items-center justify-between gap-2">
@@ -148,6 +177,8 @@ function Thread({ active, canReply }: { active: ActiveConversation; canReply: bo
                 </div>
             </header>
 
+            {active.draft && <DraftCard draft={active.draft} phone={active.phone} canReview={canReply} />}
+
             <div className="flex-1 space-y-2 overflow-y-auto p-4">
                 {active.messages.map((m) => (
                     <div key={m.id} className={cn('flex', m.direction === 'outbound' ? 'justify-end' : 'justify-start')}>
@@ -200,5 +231,89 @@ function Thread({ active, canReply }: { active: ActiveConversation; canReply: bo
                 <div className="text-muted-foreground border-t px-4 py-3 text-xs">Anda hanya bisa membaca percakapan ini.</div>
             )}
         </>
+    );
+}
+
+const SESSION_TYPE_LABEL: Record<string, string> = { private: 'Privat', group: 'Grup' };
+
+/**
+ * Draf jadwal hasil bacaan AI dari chat client. AI hanya mengusulkan: admin memeriksa rinciannya,
+ * lalu membuka form jadwal yang sudah terisi untuk memilih tutor dan menyimpan.
+ */
+function DraftCard({ draft, phone, canReview }: { draft: Draft; phone: string; canReview: boolean }) {
+    const f = draft.fields;
+    const rows: [string, string | null][] = [
+        ['Tanggal', f.requested_date ? formatDayHeading(f.requested_date) : null],
+        ['Jam', f.requested_time],
+        ['Durasi', f.duration_minutes ? `${f.duration_minutes} menit` : null],
+        ['Jenis', f.session_type ? (SESSION_TYPE_LABEL[f.session_type] ?? f.session_type) : null],
+        ['Layanan', f.service_note],
+        ['Jenjang', f.degree_level],
+        ['Bidang', f.field_of_study],
+    ];
+
+    return (
+        <section className="border-b bg-amber-50/60 px-4 py-3 text-sm dark:bg-amber-950/20" aria-label="Draf jadwal dari AI">
+            <div className="flex flex-wrap items-start justify-between gap-3">
+                <div className="min-w-0">
+                    <div className="flex items-center gap-2 font-medium">
+                        Draf jadwal dari chat
+                        {draft.confidence !== null && <span className="text-muted-foreground text-xs font-normal">keyakinan {Math.round(draft.confidence * 100)}%</span>}
+                    </div>
+                    {draft.summary && <p className="text-muted-foreground mt-0.5">{draft.summary}</p>}
+                </div>
+                {canReview && (
+                    <div className="flex flex-wrap items-center gap-2">
+                        <Button size="sm" asChild>
+                            <Link href={route('schedule.create', { draft_id: draft.id })}>
+                                <CalendarPlus /> Atur jadwal
+                            </Link>
+                        </Button>
+                        <ConfirmDialog
+                            trigger={
+                                <Button size="sm" variant="outline">
+                                    Tolak
+                                </Button>
+                            }
+                            title="Tolak draf ini?"
+                            description="Draf dihapus dari daftar tunggu. Chat tetap ada di inbox."
+                            confirmLabel="Tolak draf"
+                            destructive
+                            onConfirm={() => router.post(route('drafts.reject', draft.id), {}, { preserveScroll: true })}
+                        />
+                    </div>
+                )}
+            </div>
+
+            <dl className="mt-2 flex flex-wrap gap-x-6 gap-y-1">
+                {rows
+                    .filter(([, value]) => value)
+                    .map(([label, value]) => (
+                        <div key={label} className="flex gap-1.5">
+                            <dt className="text-muted-foreground">{label}:</dt>
+                            <dd className="font-medium">{value}</dd>
+                        </div>
+                    ))}
+            </dl>
+
+            {!draft.client_registered && (
+                <p className="mt-2 flex flex-wrap items-center gap-2 text-amber-900 dark:text-amber-200">
+                    Nomor ini belum terdaftar sebagai client.
+                    {canReview && (
+                        <Link
+                            href={route('clients.create', {
+                                name: f.client_name ?? undefined,
+                                phone,
+                                degree_level: f.degree_level ?? undefined,
+                                study_program: f.field_of_study ?? undefined,
+                            })}
+                            className="inline-flex items-center gap-1 font-medium underline"
+                        >
+                            <UserPlus className="size-3.5" /> Daftarkan client
+                        </Link>
+                    )}
+                </p>
+            )}
+        </section>
     );
 }

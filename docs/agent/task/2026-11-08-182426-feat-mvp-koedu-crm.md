@@ -28,7 +28,7 @@ Acuan: [kebutuhan-bisnis.md](../knowledge/kebutuhan-bisnis.md), [arsitektur.md](
 13. [x] Jadwal: sesi privat dan grup (kapasitas), cek bentrok tutor dan client, peringatan jam/batas sesi/kuota/pembayaran, absensi, potong kuota saat selesai, ubah, batal
 14. [x] Saran tutor: skor dari bidang, jenjang, pembimbing saat ini, jam tersedia, beban minggu itu, dengan alasan per tutor
 15. [x] Adapter `WhatsAppProvider` (driver waha, cloud_api) + inbox WA (baca, balas). Template WA resmi (di luar 24 jam) belum ada
-16. [ ] Adapter `AiProvider` (driver gemini, rotasi key saat 429, fallback provider) + draf jadwal dari chat
+16. [ ] (berjalan) Adapter `AiProvider` (Gemini dengan rotasi key, cadangan OpenAI-compatible, fallback) + draf jadwal dari chat + persetujuan di inbox. Kode dan test selesai. Belum: uji dengan API key Gemini sungguhan (isi `GEMINI_API_KEYS`, jalankan `php artisan ai:check`, lalu kirim chat dari HP)
 17. [ ] `SheetSync` lewat queue ke Google Sheets
 18. [ ] (berjalan) API untuk n8n (token): webhook WA masuk (sudah), daftar reminder jatuh tempo, tandai terkirim (belum)
 19. [ ] (berjalan) Workflow n8n (JSON di repo). Sudah: WA masuk ke Laravel. Belum: notif tutor saat jadwal disetujui, reminder H-1 dan 1 jam, paket hampir habis, pembayaran belum lunas

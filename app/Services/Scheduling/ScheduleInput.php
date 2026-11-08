@@ -64,6 +64,7 @@ final readonly class ScheduleInput
             capacity: $type === ConsultationType::Private ? 1 : max(1, (int) ($data['capacity'] ?? 20)),
             benefitType: BenefitType::tryFrom((string) ($data['benefit_type'] ?? '')),
             clientIds: $clientIds,
+            scheduleDraftId: ! empty($data['schedule_draft_id']) ? (int) $data['schedule_draft_id'] : null,
         );
     }
 

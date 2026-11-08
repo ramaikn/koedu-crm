@@ -6,6 +6,7 @@ use App\Http\Controllers\EnrollmentController;
 use App\Http\Controllers\InboxController;
 use App\Http\Controllers\PackageController;
 use App\Http\Controllers\ScheduleController;
+use App\Http\Controllers\ScheduleDraftController;
 use App\Http\Controllers\TutorController;
 use Illuminate\Support\Facades\Route;
 
@@ -23,6 +24,7 @@ Route::middleware(['auth'])->group(function () {
         Route::post('schedule', [ScheduleController::class, 'store'])->name('schedule.store');
         Route::post('schedule/check', [ScheduleController::class, 'check'])->name('schedule.check');
         Route::post('schedule/suggest-tutors', [ScheduleController::class, 'suggestTutors'])->name('schedule.suggest');
+        Route::post('schedule-drafts/{draft}/reject', [ScheduleDraftController::class, 'reject'])->name('drafts.reject');
         Route::get('schedule/{consultation}/edit', [ScheduleController::class, 'edit'])->name('schedule.edit');
         Route::put('schedule/{consultation}', [ScheduleController::class, 'update'])->name('schedule.update');
         Route::post('schedule/{consultation}/cancel', [ScheduleController::class, 'cancel'])->name('schedule.cancel');

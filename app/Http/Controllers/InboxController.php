@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Actions\WhatsApp\SendWhatsAppMessage;
+use App\Models\ScheduleDraft;
 use App\Models\WaConversation;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -50,6 +51,8 @@ class InboxController extends Controller
     /** @return array<string, mixed> */
     private function props(?WaConversation $active): array
     {
+        $withDraft = ScheduleDraft::pending()->pluck('conversation_id')->flip();
+
         $conversations = WaConversation::query()
             ->with(['client:id,name', 'messages' => fn ($q) => $q->latest('id')->limit(1)])
             ->orderByDesc('last_message_at')
@@ -57,6 +60,7 @@ class InboxController extends Controller
             ->get()
             ->map(fn (WaConversation $c) => [
                 'id' => $c->id,
+                'has_draft' => $withDraft->has($c->id),
                 'name' => $c->client?->name ?? $c->display_name ?? $c->phone,
                 'phone' => $c->phone,
                 'is_client' => $c->client_id !== null,
@@ -72,6 +76,7 @@ class InboxController extends Controller
                 'name' => $active->client?->name ?? $active->display_name ?? $active->phone,
                 'phone' => $active->phone,
                 'client_id' => $active->client_id,
+                'draft' => $this->draftProps($active),
                 // Diambil dari yang terbaru, lalu dibalik supaya tampil dari lama ke baru.
                 'messages' => $active->messages()->latest('id')->limit(self::MESSAGE_LIMIT)->get()
                     ->reverse()->values()
@@ -86,6 +91,35 @@ class InboxController extends Controller
                     ]),
             ],
             'can_reply' => request()->user()->isAdmin(),
+        ];
+    }
+
+    /** Draf jadwal dari AI yang menunggu keputusan admin untuk percakapan ini. */
+    private function draftProps(WaConversation $conversation): ?array
+    {
+        $draft = $conversation->scheduleDrafts()->pending()->latest('id')->first();
+        if ($draft === null) {
+            return null;
+        }
+
+        $x = $draft->extracted;
+
+        return [
+            'id' => $draft->id,
+            'summary' => $x['summary'] ?? '',
+            'confidence' => $x['confidence'] ?? null,
+            'fields' => [
+                'client_name' => $x['client_name'] ?? null,
+                'degree_level' => $x['degree_level'] ?? null,
+                'field_of_study' => $x['field_of_study'] ?? null,
+                'service_note' => $x['service_note'] ?? null,
+                'requested_date' => $x['requested_date'] ?? null,
+                'requested_time' => $x['requested_time'] ?? null,
+                'duration_minutes' => $x['duration_minutes'] ?? null,
+                'session_type' => $x['session_type'] ?? null,
+            ],
+            'created_at' => $draft->created_at->toIso8601String(),
+            'client_registered' => $conversation->client_id !== null,
         ];
     }
 }

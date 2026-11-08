@@ -14,6 +14,7 @@ use App\Http\Requests\ConsultationRequest;
 use App\Models\Client;
 use App\Models\Consultation;
 use App\Models\ConsultationParticipant;
+use App\Models\ScheduleDraft;
 use App\Models\Tutor;
 use App\Services\Scheduling\ScheduleChecker;
 use App\Services\Scheduling\ScheduleInput;
@@ -113,15 +114,29 @@ class ScheduleController extends Controller
         ]);
     }
 
-    public function create(Request $request): Response
+    public function create(Request $request): Response|RedirectResponse
     {
         Gate::authorize('create', Consultation::class);
 
-        $preset = $request->integer('client_id') ? Client::find($request->integer('client_id')) : null;
+        $draft = null;
+        if ($request->integer('draft_id')) {
+            $draft = ScheduleDraft::pending()->with('conversation')->find($request->integer('draft_id'));
+            if ($draft === null) {
+                // Draf sudah diproses admin lain atau tidak ada: buka form kosong saja.
+                return to_route('schedule.create')->with('success', 'Draf itu sudah diproses.');
+            }
+        }
+
+        // Client dari draf: yang sudah terhubung, atau yang baru didaftarkan dengan nomor chat yang sama.
+        $preset = $draft
+            ? ($draft->client ?? Client::where('phone', $draft->conversation->phone)->first())
+            : ($request->integer('client_id') ? Client::find($request->integer('client_id')) : null);
 
         return Inertia::render('schedule/form', [
             'consultation' => null,
             'preset_clients' => $preset ? [['id' => $preset->id, 'name' => $preset->name, 'phone' => $preset->phone]] : [],
+            'draft' => $draft ? $this->draftSummary($draft, $preset) : null,
+            'prefill' => $draft ? $this->draftPrefill($draft) : null,
             ...$this->formOptions(),
         ]);
     }
@@ -305,6 +320,45 @@ class ScheduleController extends Controller
             'eligible' => array_map(fn ($s) => $s->toArray(), $result['eligible']),
             'blocked' => array_map(fn ($s) => $s->toArray(), $result['blocked']),
         ]);
+    }
+
+    /** @return array<string, mixed> */
+    private function draftSummary(ScheduleDraft $draft, ?Client $client): array
+    {
+        return [
+            'id' => $draft->id,
+            'summary' => $draft->extracted['summary'] ?? '',
+            'confidence' => $draft->extracted['confidence'] ?? null,
+            'conversation_id' => $draft->conversation_id,
+            'client_registered' => $client !== null,
+            // Dipakai untuk mendaftarkan client baru langsung dari form bila nomor ini belum terdaftar.
+            'register' => [
+                'name' => $draft->extracted['client_name'] ?? $draft->conversation->display_name,
+                'phone' => $draft->conversation->phone,
+                'degree_level' => $draft->extracted['degree_level'] ?? null,
+                'study_program' => $draft->extracted['field_of_study'] ?? null,
+            ],
+        ];
+    }
+
+    /**
+     * Isian awal form dari rincian yang dibaca AI. Hanya yang terisi; sisanya memakai bawaan form.
+     *
+     * @return array<string, mixed>
+     */
+    private function draftPrefill(ScheduleDraft $draft): array
+    {
+        $x = $draft->extracted;
+        $type = $x['session_type'] ?? null;
+
+        return array_filter([
+            'type' => $type,
+            'benefit_type' => $type === 'group' ? BenefitType::GroupMeeting->value : null,
+            'date' => $x['requested_date'] ?? null,
+            'start_time' => $x['requested_time'] ?? null,
+            'duration_minutes' => $x['duration_minutes'] ?? null,
+            'topic' => $x['service_note'] ?? null,
+        ], fn ($value) => $value !== null);
     }
 
     /** @return array<string, mixed> */

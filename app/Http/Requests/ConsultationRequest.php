@@ -38,6 +38,8 @@ class ConsultationRequest extends FormRequest
             'client_ids' => ['required', 'array', 'min:1'],
             'client_ids.*' => ['integer', 'exists:clients,id'],
             'confirm_warnings' => ['nullable', 'boolean'],
+            // Diisi bila jadwal dibuat dari draf AI di inbox. Draf ditandai disetujui saat jadwal tersimpan.
+            'schedule_draft_id' => ['nullable', 'integer', 'exists:schedule_drafts,id'],
         ];
     }
 

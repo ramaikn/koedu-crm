@@ -56,9 +56,30 @@ interface CheckResult {
     warnings: string[];
 }
 
+interface DraftInfo {
+    id: number;
+    summary: string;
+    confidence: number | null;
+    conversation_id: number;
+    client_registered: boolean;
+    register: { name: string | null; phone: string; degree_level: string | null; study_program: string | null };
+}
+
+interface Prefill {
+    type?: string;
+    benefit_type?: string;
+    date?: string;
+    start_time?: string;
+    duration_minutes?: number;
+    topic?: string;
+}
+
 interface Props {
     consultation: ConsultationData | null;
     preset_clients: ClientLite[];
+    /** Hanya ada saat jadwal dibuat dari draf AI di inbox. */
+    draft?: DraftInfo | null;
+    prefill?: Prefill | null;
     tutors: { id: number; name: string; degree: string; fields: string[] }[];
     types: Option[];
     meeting_modes: Option[];
@@ -68,21 +89,23 @@ interface Props {
 const DURATIONS = [30, 45, 60, 90, 120];
 const DEFAULT_BENEFIT: Record<string, string> = { private: 'zoom_session', group: 'group_meeting' };
 
-export default function ScheduleForm({ consultation, preset_clients, tutors, types, meeting_modes, benefit_types }: Props) {
+export default function ScheduleForm({ consultation, preset_clients, draft = null, prefill = null, tutors, types, meeting_modes, benefit_types }: Props) {
     const { timezone } = usePage<SharedData>().props;
     const editing = consultation !== null;
 
     const [clients, setClients] = useState<ClientLite[]>(preset_clients);
     const { data, setData, post, put, processing, errors } = useForm({
-        type: consultation?.type ?? 'private',
+        type: consultation?.type ?? prefill?.type ?? 'private',
         client_ids: preset_clients.map((c) => c.id),
-        benefit_type: consultation?.benefit_type ?? DEFAULT_BENEFIT.private,
-        date: consultation?.date ?? addDays(todayIn(timezone), 1),
-        start_time: consultation?.start_time ?? '10:00',
-        duration_minutes: consultation?.duration_minutes ?? 60,
+        benefit_type: consultation?.benefit_type ?? prefill?.benefit_type ?? DEFAULT_BENEFIT[prefill?.type ?? 'private'],
+        date: consultation?.date ?? prefill?.date ?? addDays(todayIn(timezone), 1),
+        start_time: consultation?.start_time ?? prefill?.start_time ?? '10:00',
+        duration_minutes: consultation?.duration_minutes ?? prefill?.duration_minutes ?? 60,
         tutor_id: consultation?.tutor_id ? String(consultation.tutor_id) : '',
         title: consultation?.title ?? '',
-        topic: consultation?.topic ?? '',
+        topic: consultation?.topic ?? prefill?.topic ?? '',
+        // Menandai draf AI sebagai disetujui saat jadwal tersimpan.
+        schedule_draft_id: draft?.id ?? (null as number | null),
         meeting_mode: consultation?.meeting_mode ?? 'zoom',
         meeting_url: consultation?.meeting_url ?? '',
         location: consultation?.location ?? '',
@@ -201,6 +224,8 @@ export default function ScheduleForm({ consultation, preset_clients, tutors, typ
             <Head title={editing ? 'Ubah jadwal' : 'Buat jadwal'} />
             <form onSubmit={submit} className="flex max-w-3xl flex-col gap-6 p-4 md:p-6">
                 <PageHeader title={editing ? 'Ubah jadwal' : 'Buat jadwal'} />
+
+                {draft && <DraftBanner draft={draft} />}
 
                 <Field label="Jenis sesi" error={errors.type}>
                     <div className="inline-flex rounded-md border p-1" role="radiogroup" aria-label="Jenis sesi">
@@ -502,6 +527,38 @@ function CheckPanel({
             {check.ready && errors.length === 0 && check.warnings.length === 0 && (
                 <p className="text-sm text-green-700 dark:text-green-400">Tidak ada bentrok atau peringatan. Jadwal siap disimpan.</p>
             )}
+        </div>
+    );
+}
+
+/** Ringkasan draf AI di atas form, supaya admin bisa mencocokkan isian dengan chat aslinya. */
+function DraftBanner({ draft }: { draft: DraftInfo }) {
+    return (
+        <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900 dark:border-amber-900 dark:bg-amber-950 dark:text-amber-200">
+            <div className="font-medium">Dari chat WhatsApp</div>
+            {draft.summary && <p className="mt-0.5">{draft.summary}</p>}
+            <p className="mt-1 text-xs opacity-80">Isian di bawah dibaca otomatis oleh AI. Periksa ulang sebelum menyimpan.</p>
+            <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1">
+                <Link href={route('inbox.show', draft.conversation_id)} className="font-medium underline">
+                    Lihat chat
+                </Link>
+                {!draft.client_registered && (
+                    <>
+                        <span>Nomor ini belum terdaftar sebagai client.</span>
+                        <Link
+                            href={route('clients.create', {
+                                name: draft.register.name ?? undefined,
+                                phone: draft.register.phone,
+                                degree_level: draft.register.degree_level ?? undefined,
+                                study_program: draft.register.study_program ?? undefined,
+                            })}
+                            className="font-medium underline"
+                        >
+                            Daftarkan client dulu
+                        </Link>
+                    </>
+                )}
+            </div>
         </div>
     );
 }

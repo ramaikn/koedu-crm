@@ -25,6 +25,8 @@ interface ClientData {
 
 interface Props {
     client: ClientData | null;
+    /** Isian awal dari draf AI di inbox (nama, nomor, jenjang, jurusan dari chat). */
+    prefill?: { name?: string; phone?: string; degree_level?: string; study_program?: string } | null;
     fields: { id: number; name: string; group: string }[];
     degrees: { value: string; label: string }[];
     statuses: { value: string; label: string }[];
@@ -32,17 +34,18 @@ interface Props {
 
 const SOURCES = ['whatsapp', 'instagram', 'website', 'referral'];
 
-export default function ClientForm({ client, fields, degrees, statuses }: Props) {
+export default function ClientForm({ client, prefill = null, fields, degrees, statuses }: Props) {
     const { data, setData, post, put, processing, errors } = useForm({
-        name: client?.name ?? '',
-        phone: client?.phone ?? '',
+        name: client?.name ?? prefill?.name ?? '',
+        phone: client?.phone ?? prefill?.phone ?? '',
         email: client?.email ?? '',
         university: client?.university ?? '',
-        study_program: client?.study_program ?? '',
+        study_program: client?.study_program ?? prefill?.study_program ?? '',
         expertise_field_id: client?.expertise_field_id ? String(client.expertise_field_id) : '',
-        degree_level: client?.degree_level ?? '',
+        degree_level: client?.degree_level ?? prefill?.degree_level ?? '',
+        // Client dari chat WhatsApp mulai sebagai calon client.
         status: client?.status ?? 'lead',
-        source: client?.source ?? '',
+        source: client?.source ?? (prefill?.phone ? 'whatsapp' : ''),
         notes: client?.notes ?? '',
     });
 

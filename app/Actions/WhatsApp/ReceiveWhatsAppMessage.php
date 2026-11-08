@@ -4,9 +4,11 @@ namespace App\Actions\WhatsApp;
 
 use App\Enums\MessageDirection;
 use App\Enums\MessageStatus;
+use App\Jobs\ExtractScheduleDraftJob;
 use App\Models\Client;
 use App\Models\WaConversation;
 use App\Models\WaMessage;
+use App\Services\Ai\AiAvailability;
 use App\Services\WhatsApp\IncomingMessage;
 use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Support\Facades\DB;
@@ -37,6 +39,11 @@ final class ReceiveWhatsAppMessage
             'provider' => $incoming->provider,
             'type' => $incoming->type,
         ]);
+
+        // Chat teks dibaca AI di antrean terpisah, supaya webhook tetap cepat dan kegagalan AI tidak memengaruhinya.
+        if ($message->type === 'text' && AiAvailability::enabled()) {
+            ExtractScheduleDraftJob::dispatch($message->id)->onQueue('ai');
+        }
 
         return $message;
     }
