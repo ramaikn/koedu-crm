@@ -1,0 +1,157 @@
+# Stack pengembangan Koedu CRM.
+# Semua port hanya dibuka ke 127.0.0.1 supaya tidak bisa diakses dari jaringan lain.
+# Jalankan: docker compose up -d   |   Frontend dev (hot reload): docker compose --profile dev up -d
+
+x-php: &php
+  build:
+    context: .
+    dockerfile: docker/php/Dockerfile
+    target: dev
+  image: koedu-crm-php:dev
+  # Sengaja tanpa env_file: Laravel membaca .env dari folder yang di-mount.
+  # env_file membekukan nilai saat container dibuat (mis. APP_KEY kosong) dan menimpa .env.
+  volumes:
+    - ./:/var/www/html
+    # vendor di volume Docker: membaca ribuan file dari disk Windows sangat lambat.
+    # Isi ulang dengan: docker compose run --rm app composer install
+    - vendor:/var/www/html/vendor
+  depends_on:
+    db:
+      condition: service_healthy
+    redis:
+      condition: service_healthy
+  restart: unless-stopped
+
+services:
+  app:
+    <<: *php
+    healthcheck:
+      # php-fpm hidup bila port 9000 menerima koneksi FastCGI.
+      test: ["CMD-SHELL", "cgi-fcgi -bind -connect 127.0.0.1:9000 >/dev/null 2>&1 || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+
+  web:
+    image: nginx:1.30-alpine
+    ports:
+      - "127.0.0.1:${APP_PORT:-8000}:80"
+    volumes:
+      - ./:/var/www/html:ro
+      - ./docker/nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
+    depends_on:
+      app:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1/up >/dev/null || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  worker:
+    <<: *php
+    # Antrean: kirim WA, sinkron Google Sheets, panggilan AI.
+    command: php artisan queue:work redis --queue=default,whatsapp,sheets,ai --tries=3 --backoff=10 --sleep=1
+
+  scheduler:
+    <<: *php
+    # Pengganti cron: menjalankan tugas terjadwal Laravel (reminder, cek paket hampir habis).
+    command: php artisan schedule:work
+
+  vite:
+    image: oven/bun:1.4.4-alpine
+    profiles: ["dev"]
+    working_dir: /app
+    command: sh -c "bun install && bun run dev --host 0.0.0.0"
+    ports:
+      - "127.0.0.1:5173:5173"
+    volumes:
+      - ./:/app
+
+  db:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_DB: ${DB_DATABASE:-koedu}
+      POSTGRES_USER: ${DB_USERNAME:-koedu}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:?isi DB_PASSWORD di .env}
+      N8N_DB_NAME: ${N8N_DB_NAME:-n8n}
+    ports:
+      - "127.0.0.1:${DB_FORWARD_PORT:-5432}:5432"
+    volumes:
+      - db-data:/var/lib/postgresql/data
+      - ./docker/postgres/init-n8n-db.sh:/docker-entrypoint-initdb.d/10-n8n-db.sh:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+
+  redis:
+    image: redis:8-alpine
+    command: redis-server --appendonly yes
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+
+  n8n:
+    image: n8nio/n8n:2.47.2
+    environment:
+      DB_TYPE: postgresdb
+      DB_POSTGRESDB_HOST: db
+      DB_POSTGRESDB_PORT: 5432
+      DB_POSTGRESDB_DATABASE: ${N8N_DB_NAME:-n8n}
+      DB_POSTGRESDB_USER: ${DB_USERNAME:-koedu}
+      DB_POSTGRESDB_PASSWORD: ${DB_PASSWORD}
+      N8N_ENCRYPTION_KEY: ${N8N_ENCRYPTION_KEY:?isi N8N_ENCRYPTION_KEY di .env}
+      GENERIC_TIMEZONE: ${APP_TIMEZONE:-Asia/Makassar}
+      TZ: ${APP_TIMEZONE:-Asia/Makassar}
+      N8N_SECURE_COOKIE: "false"
+      N8N_DIAGNOSTICS_ENABLED: "false"
+      # Dipakai workflow untuk memanggil Laravel dan WAHA di jaringan Docker.
+      KOEDU_API_URL: http://web
+      KOEDU_N8N_TOKEN: ${N8N_API_TOKEN}
+      WAHA_URL: http://waha:3000
+      N8N_BLOCK_ENV_ACCESS_IN_NODE: "false"
+    ports:
+      - "127.0.0.1:${N8N_PORT:-5678}:5678"
+    volumes:
+      - n8n-data:/home/node/.n8n
+      - ./n8n/workflows:/workflows:ro
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+
+  waha:
+    # Gateway WhatsApp untuk simulasi. Engine GOWS ringan (tanpa browser).
+    image: devlikeapro/waha:gows-2026.10.1
+    environment:
+      WHATSAPP_DEFAULT_ENGINE: GOWS
+      WAHA_API_KEY: ${WAHA_API_KEY:?isi WAHA_API_KEY di .env}
+      WAHA_DASHBOARD_USERNAME: admin
+      WAHA_DASHBOARD_PASSWORD: ${WAHA_DASHBOARD_PASSWORD:?isi WAHA_DASHBOARD_PASSWORD di .env}
+      WHATSAPP_SWAGGER_USERNAME: admin
+      WHATSAPP_SWAGGER_PASSWORD: ${WAHA_DASHBOARD_PASSWORD}
+      # Pesan masuk dikirim ke n8n, lalu n8n meneruskan ke Laravel.
+      WHATSAPP_HOOK_URL: http://n8n:5678/webhook/wa-incoming
+      WHATSAPP_HOOK_EVENTS: message
+      TZ: ${APP_TIMEZONE:-Asia/Makassar}
+    ports:
+      - "127.0.0.1:${WAHA_PORT:-3000}:3000"
+    volumes:
+      - waha-sessions:/app/.sessions
+    restart: unless-stopped
+
+volumes:
+  vendor:
+  db-data:
+  redis-data:
+  n8n-data:
+  waha-sessions:
