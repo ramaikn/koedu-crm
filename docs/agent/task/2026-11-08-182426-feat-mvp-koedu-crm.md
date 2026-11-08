@@ -29,7 +29,7 @@ Acuan: [kebutuhan-bisnis.md](../knowledge/kebutuhan-bisnis.md), [arsitektur.md](
 14. [x] Saran tutor: skor dari bidang, jenjang, pembimbing saat ini, jam tersedia, beban minggu itu, dengan alasan per tutor
 15. [x] Adapter `WhatsAppProvider` (driver waha, cloud_api) + inbox WA (baca, balas). Template WA resmi (di luar 24 jam) belum ada
 16. [x] Adapter `AiProvider` (Gemini dengan rotasi key dan model cadangan, cadangan OpenAI-compatible, fallback) + draf jadwal dari chat + persetujuan di inbox. Diuji dengan Gemini sungguhan lewat `ai:check` dan webhook simulasi. Chat sungguhan dari HP belum dicoba
-17. [ ] `SheetSync` lewat queue ke Google Sheets
+17. [ ] (berjalan) Salinan Google Sheets lewat antrean (tab Jadwal, Client, Paket Client), rekonsiliasi malam lewat n8n, `sheets:check` dan `sheets:sync`, kartu status di dashboard. Kode dan test selesai (289 lulus). Belum: uji ke Google sungguhan (butuh akun layanan dan Sheet milik user, lihat panduan di `knowledge/google-sheets.md`)
 18. [x] API untuk n8n (token): webhook WA masuk dan pemicu notifikasi `POST /api/n8n/notifications/run`. Rancangan berubah dari rencana awal: Laravel yang menentukan dan mengirim (n8n hanya pemicu), jadi endpoint "daftar reminder" dan "tandai terkirim" tidak diperlukan
 19. [ ] (berjalan) Workflow n8n (JSON di repo): WA masuk (sudah), notifikasi dan pengingat berkala (sudah, kode dan test selesai). Belum: uji kirim sungguhan ke nomor sendiri (isi `NOTIFY_ALLOWED_PHONES`, nyalakan `NOTIFICATIONS_ENABLED`)
 19a. [ ] Template WhatsApp resmi (Meta) untuk pesan di luar jendela 24 jam, dibutuhkan sebelum pindah ke Cloud API (pengingat ke client yang lama tidak chat)

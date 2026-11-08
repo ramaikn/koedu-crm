@@ -1,9 +1,11 @@
 import { PageHeader } from '@/components/page-header';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import AppLayout from '@/layouts/app-layout';
-import { formatDateOnly, formatDayMonth, formatTime } from '@/lib/datetime';
+import { Button } from '@/components/ui/button';
+import { formatDateOnly, formatDateTime, formatDayMonth, formatTime } from '@/lib/datetime';
 import { type BreadcrumbItem, type SharedData } from '@/types';
 import { Head, Link, usePage } from '@inertiajs/react';
+import { ExternalLink } from 'lucide-react';
 
 interface SessionItem {
     id: number;
@@ -27,11 +29,18 @@ interface Props {
         new_clients_7d: number;
     };
     expiring?: { id: number; client_id: number; client: string; package: string; ends_on: string }[];
+    /** Ada hanya bila salinan ke Google Sheets aktif. */
+    sheets?: { url: string; tabs: { tab: string; title: string; synced_at: string | null; rows: number | null; error: 'config' | 'transient' | null }[] } | null;
 }
 
 const breadcrumbs: BreadcrumbItem[] = [{ title: 'Dashboard', href: '/dashboard' }];
 
-export default function Dashboard({ role, today, upcoming, stats, expiring }: Props) {
+const SHEET_ERROR_TEXT = {
+    config: 'Penyalinan berhenti karena pengaturan Google belum benar. Hubungi pengelola sistem.',
+    transient: 'Penyalinan tertunda dan akan dicoba lagi otomatis.',
+} as const;
+
+export default function Dashboard({ role, today, upcoming, stats, expiring, sheets }: Props) {
     const { timezone, auth } = usePage<SharedData>().props;
     const isTutor = role === 'tutor';
 
@@ -127,6 +136,34 @@ export default function Dashboard({ role, today, upcoming, stats, expiring }: Pr
                                     ))}
                                 </ul>
                             )}
+                        </CardContent>
+                    </Card>
+                )}
+
+                {sheets && (
+                    <Card>
+                        <CardHeader className="flex flex-row items-center justify-between gap-3">
+                            <CardTitle className="text-base">Google Sheets</CardTitle>
+                            <Button variant="outline" size="sm" asChild>
+                                <a href={sheets.url} target="_blank" rel="noreferrer">
+                                    <ExternalLink /> Buka Google Sheets
+                                </a>
+                            </Button>
+                        </CardHeader>
+                        <CardContent>
+                            <ul className="divide-y text-sm">
+                                {sheets.tabs.map((tab) => (
+                                    <li key={tab.tab} className="py-3">
+                                        <div className="flex flex-wrap items-center justify-between gap-2">
+                                            <span className="font-medium">{tab.title}</span>
+                                            <span className="text-muted-foreground">
+                                                {tab.synced_at ? `Disalin ${formatDateTime(tab.synced_at, timezone)} (${tab.rows} baris)` : 'Belum pernah disalin'}
+                                            </span>
+                                        </div>
+                                        {tab.error && <p className="mt-1 text-amber-700 dark:text-amber-300">{SHEET_ERROR_TEXT[tab.error]}</p>}
+                                    </li>
+                                ))}
+                            </ul>
                         </CardContent>
                     </Card>
                 )}

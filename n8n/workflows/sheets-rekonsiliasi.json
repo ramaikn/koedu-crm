@@ -1,0 +1,60 @@
+{
+  "id": "koeduSheets01",
+  "name": "Rekonsiliasi Google Sheets (tiap malam)",
+  "active": true,
+  "nodes": [
+    {
+      "parameters": {
+        "content": "Tiap malam pukul 02.00 WITA memicu Laravel untuk mencocokkan ulang seluruh tab Google Sheets (Jadwal, Client, Paket Client) dengan database. Perubahan sehari-hari sudah tersalin otomatis dalam hitungan detik; ini hanya membetulkan yang terlewat.\n\nTidak ada yang terjadi bila GOOGLE_SHEETS_ENABLED=false di .env.",
+        "height": 150,
+        "width": 440
+      },
+      "id": "6a5e1fa7-7f3d-4c8c-9caa-5b7d3d4f6a04",
+      "name": "Catatan",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [0, -190]
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [{ "field": "cronExpression", "expression": "0 2 * * *" }]
+        }
+      },
+      "id": "7b6f20b8-8a4e-4d9d-8dbb-6c8e4e5a7b05",
+      "name": "Tiap malam 02.00",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [0, 0]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.KOEDU_API_URL }}/api/n8n/sheets/sync",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "X-Koedu-Token", "value": "={{ $env.KOEDU_N8N_TOKEN }}" },
+            { "name": "Accept", "value": "application/json" }
+          ]
+        },
+        "options": { "timeout": 60000 }
+      },
+      "id": "8c7031c9-9b5f-4eae-9ecc-7d9f5f6b8c06",
+      "name": "Cocokkan Google Sheets di Laravel",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [260, 0],
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 10000
+    }
+  ],
+  "connections": {
+    "Tiap malam 02.00": {
+      "main": [[{ "node": "Cocokkan Google Sheets di Laravel", "type": "main", "index": 0 }]]
+    }
+  },
+  "settings": { "executionOrder": "v1", "timezone": "Asia/Makassar" },
+  "pinData": {}
+}

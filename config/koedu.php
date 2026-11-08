@@ -55,6 +55,10 @@ return [
         'enabled' => (bool) env('GOOGLE_SHEETS_ENABLED', false),
         'spreadsheet_id' => env('GOOGLE_SHEETS_SPREADSHEET_ID'),
         'credentials_path' => env('GOOGLE_SHEETS_CREDENTIALS_PATH'),
+        // Sesi yang lebih lama dari ini tidak disalin (tetap ada di aplikasi), supaya Sheet tidak membengkak.
+        'months_back' => (int) env('GOOGLE_SHEETS_MONTHS_BACK', 12),
+        // Batas baris per tab. Google Sheets membatasi 10 juta sel per file.
+        'max_rows' => (int) env('GOOGLE_SHEETS_MAX_ROWS', 20000),
     ],
 
     'n8n' => [

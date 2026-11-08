@@ -10,6 +10,7 @@ use App\Services\Notifications\Rules\AdminDigest;
 use App\Services\Notifications\Rules\ClientSessionNotices;
 use App\Services\Notifications\Rules\SessionReminders;
 use App\Services\Notifications\Rules\TutorSessionNotices;
+use App\Services\Sheets\SheetSyncDispatcher;
 use App\Support\PhoneNumber;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\DB;
@@ -31,6 +32,7 @@ final class NotificationDispatcher
         private readonly AdminDigest $digest,
         private readonly NotificationWindow $window,
         private readonly SendWhatsAppMessage $send,
+        private readonly SheetSyncDispatcher $sheets,
     ) {}
 
     /**
@@ -52,6 +54,10 @@ final class NotificationDispatcher
         }
 
         if (! $dryRun) {
+            // Kolom "tutor diberi tahu" dan "client dikonfirmasi" di tab Jadwal berubah lewat query langsung (tanpa pengamat model).
+            if ($result->total(NotificationRunResult::SENT) > 0) {
+                $this->sheets->touch('jadwal');
+            }
             Log::info('Notifikasi dijalankan', $result->toArray($this->failedRecently()));
         }
 

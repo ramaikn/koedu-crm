@@ -13,6 +13,8 @@ use App\Enums\MessageStatus;
 use App\Models\ScheduleDraft;
 use App\Models\WaConversation;
 use App\Models\WaMessage;
+use App\Services\Sheets\SheetsAvailability;
+use App\Services\Sheets\SheetSyncStatus;
 use Carbon\CarbonImmutable;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -65,6 +67,10 @@ class DashboardController extends Controller
                         ->where('created_at', '>=', now()->subDay())->count(),
                     'new_clients_7d' => Client::where('created_at', '>=', $now->subDays(7))->count(),
                 ],
+                'sheets' => SheetsAvailability::enabled() ? [
+                    'url' => 'https://docs.google.com/spreadsheets/d/'.config('koedu.sheets.spreadsheet_id'),
+                    'tabs' => app(SheetSyncStatus::class)->summary(),
+                ] : null,
                 'expiring' => $expiring->map(fn (Enrollment $e) => [
                     'id' => $e->id,
                     'client_id' => $e->client_id,

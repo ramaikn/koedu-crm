@@ -2,10 +2,13 @@
 
 namespace App\Providers;
 
+use App\Observers\SheetSyncObserver;
 use App\Services\Ai\AiProvider;
 use App\Services\Ai\FallbackAiProvider;
 use App\Services\Ai\GeminiProvider;
 use App\Services\Ai\OpenAiCompatibleProvider;
+use App\Services\Sheets\GoogleSheetsClient;
+use App\Services\Sheets\ServiceAccountCredentials;
 use App\Services\WhatsApp\CloudApiDriver;
 use App\Services\WhatsApp\WahaDriver;
 use App\Services\WhatsApp\WhatsAppProvider;
@@ -18,6 +21,13 @@ class AppServiceProvider extends ServiceProvider
     public function register(): void
     {
         $this->app->bind(AiProvider::class, fn () => $this->makeAiProvider());
+
+        // Dibuat saat dipakai, bukan saat boot: file kunci yang salah baru ketahuan ketika sinkron dijalankan.
+        $this->app->bind(GoogleSheetsClient::class, fn () => new GoogleSheetsClient(
+            (string) config('koedu.sheets.spreadsheet_id'),
+            ServiceAccountCredentials::fromFile(config('koedu.sheets.credentials_path')),
+            $this->app->make(CacheFactory::class)->store(),
+        ));
 
         // Driver dipilih dari WHATSAPP_DRIVER. Bukan singleton, supaya config bisa diganti saat test.
         $this->app->bind(WhatsAppProvider::class, function () {
@@ -59,6 +69,9 @@ class AppServiceProvider extends ServiceProvider
 
     public function boot(): void
     {
-        //
+        // Salinan ke Google Sheets: data yang tampil di sana memicu sinkron saat berubah.
+        foreach (array_keys(SheetSyncObserver::TABS_BY_MODEL) as $model) {
+            $model::observe(SheetSyncObserver::class);
+        }
     }
 }
