@@ -22,9 +22,9 @@ Acuan: [kebutuhan-bisnis.md](../knowledge/kebutuhan-bisnis.md), [arsitektur.md](
 
 ## Fitur
 12. [x] CRUD client, tutor, paket (katalog), paket client (enrollment), pembayaran lunas dengan bukti bayar, koreksi kuota manual
-12a. [ ] Kelola pengguna (director): buat akun admin/tutor, atur role, nonaktifkan, tautkan akun ke profil tutor. Saat ini akun hanya dibuat lewat seeder
-12b. [ ] Tutor mengubah jam tersedianya sendiri (policy `updateAvailability` sudah ada, halamannya belum)
-12c. [ ] Command terjadwal: paket yang lewat `ends_on` otomatis berstatus `expired`
+12a. [x] Kelola pengguna (director): buat akun admin/tutor, atur role, nonaktifkan, tautkan akun ke profil tutor. Halaman `/users`, akun nonaktif langsung dikeluarkan dari sesi
+12b. [x] Tutor mengubah jam tersedianya sendiri (`/my-availability`, editor jam dipakai bersama form tutor)
+12c. [x] Command terjadwal: paket yang lewat `ends_on` otomatis berstatus `expired` (`enrollments:expire`, tiap 00:05)
 13. [x] Jadwal: sesi privat dan grup (kapasitas), cek bentrok tutor dan client, peringatan jam/batas sesi/kuota/pembayaran, absensi, potong kuota saat selesai, ubah, batal
 14. [x] Saran tutor: skor dari bidang, jenjang, pembimbing saat ini, jam tersedia, beban minggu itu, dengan alasan per tutor
 15. [x] Adapter `WhatsAppProvider` (driver waha, cloud_api) + inbox WA (baca, balas). Template WA resmi (di luar 24 jam) belum ada

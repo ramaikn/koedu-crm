@@ -3,8 +3,8 @@
 ## Tabel utama
 | Tabel | Isi | Catatan |
 |---|---|---|
-| `users` | Akun login + `role` (director/admin/tutor), `is_active` | Akun nonaktif ditolak saat login. Tidak ada registrasi publik |
-| `tutors` | Profil tutor, jenjang S2/S3, `max_weekly_sessions` | Satu tutor = satu user role tutor |
+| `users` | Akun login + `role` (director/admin/tutor), `is_active` | Akun nonaktif ditolak saat login dan sesi yang masih berjalan diakhiri (`LogoutInactiveUser`). Tidak ada registrasi publik dan tidak ada hapus akun. Akun dibuat director di `/users` |
+| `tutors` | Profil tutor, jenjang S2/S3, `max_weekly_sessions` | Satu tutor = satu user role tutor. Akun role tutor wajib ditautkan ke satu profil; ganti role melepas tautannya |
 | `expertise_fields` + `expertise_field_tutor` | Bidang keahlian per rumpun (`group`) | Saran tutor: bidang sama > rumpun sama |
 | `tutor_availabilities` | Jam tersedia rutin per hari (ISO 1 = Senin) | |
 | `clients` | Mahasiswa, nomor WA format `62xxx`, jenjang, bidang, status | Soft delete. Nomor dinormalisasi otomatis (`App\Support\PhoneNumber`) |
@@ -19,6 +19,7 @@ Enum ada di `app/Enums` (nilai disimpan sebagai string). `BenefitType` membedaka
 
 ## Aturan bisnis yang sudah ada di kode
 - `CreateEnrollment`: masa aktif inklusif (paket 30 hari mulai 1 Nov berakhir 30 Nov).
+- `enrollments:expire` (scheduler, tiap 00:05): paket `active` yang `ends_on` sebelum hari ini menjadi `expired`. Paket masih berlaku sepanjang hari `ends_on`.
 - `CompleteConsultation`: absensi + potong kuota `benefit_type` peserta. Tidak memotong dua kali (`quota_deducted_at`) dan tidak melebihi total. Client yang tidak hadir tidak dipotong, kecuali `QUOTA_DEDUCT_ON_ABSENT=true`.
 - Zona waktu aplikasi dan sesi Postgres sama-sama `APP_TIMEZONE` (Asia/Makassar).
 - Kolom `timestamp` (mis. `sent_at`, `last_message_at`) tidak menyimpan zona. Laravel menulis jam dinding dari zona milik objek Carbon-nya. Carbon yang dibuat dari epoch (`createFromTimestamp`) berzona UTC, jadi harus dibuat dengan `config('app.timezone')`, kalau tidak jamnya bergeser 8 jam. Kolom `timestampTz` (sesi konsultasi) aman.

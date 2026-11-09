@@ -4,10 +4,12 @@ use App\Http\Controllers\ClientController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\EnrollmentController;
 use App\Http\Controllers\InboxController;
+use App\Http\Controllers\MyAvailabilityController;
 use App\Http\Controllers\PackageController;
 use App\Http\Controllers\ScheduleController;
 use App\Http\Controllers\ScheduleDraftController;
 use App\Http\Controllers\TutorController;
+use App\Http\Controllers\UserController;
 use Illuminate\Support\Facades\Route;
 
 // Aplikasi internal: tidak ada halaman publik, langsung ke dashboard (atau login).
@@ -73,6 +75,21 @@ Route::middleware(['auth'])->group(function () {
         Route::get('inbox/{conversation}', [InboxController::class, 'show'])->name('inbox.show');
         Route::post('inbox/{conversation}/messages', [InboxController::class, 'reply'])->name('inbox.reply');
         Route::post('inbox/messages/{message}/retry', [InboxController::class, 'retry'])->name('inbox.retry');
+    });
+
+    // Akun login: hanya director (UserPolicy). Tidak ada hapus, akun cukup dinonaktifkan.
+    Route::middleware('role:director')->group(function () {
+        Route::get('users', [UserController::class, 'index'])->name('users.index');
+        Route::get('users/create', [UserController::class, 'create'])->name('users.create');
+        Route::post('users', [UserController::class, 'store'])->name('users.store');
+        Route::get('users/{user}/edit', [UserController::class, 'edit'])->name('users.edit');
+        Route::put('users/{user}', [UserController::class, 'update'])->name('users.update');
+    });
+
+    // Tutor mengatur jam tersedianya sendiri. Profil lain tetap diatur admin.
+    Route::middleware('role:tutor')->group(function () {
+        Route::get('my-availability', [MyAvailabilityController::class, 'edit'])->name('my-availability.edit');
+        Route::put('my-availability', [MyAvailabilityController::class, 'update'])->name('my-availability.update');
     });
 });
 

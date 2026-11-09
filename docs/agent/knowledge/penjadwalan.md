@@ -38,6 +38,8 @@ Skor = bidang (sama persis 50, satu rumpun 25) + pembimbing client saat ini 20 +
 | Tutor | Kelola profil dan jam tersedia | idem | Tidak ada |
 | Paket (katalog) | Lihat | Kelola | Tidak ada |
 | Inbox WA | Baca dan balas | Baca | Tidak ada |
+| Jam tersedia (`/my-availability`) | Tidak ada (lewat form Tutor) | Tidak ada | Ubah jam sendiri |
+| Pengguna (`/users`) | Tidak ada | Buat akun, role, nonaktifkan, reset password, tautkan profil tutor | Tidak ada |
 
 - Bukti bayar disimpan di disk privat (`storage/app/private/payment-proofs`) dan diunduh lewat route bersesi, hanya staf.
 - Pencarian client (`Client::matching`): nama, email, universitas, atau nomor (format lokal 0812.. cocok dengan 62812..). Nomor hanya dicari bila yang diketik minimal 3 angka.

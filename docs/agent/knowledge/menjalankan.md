@@ -27,6 +27,7 @@ bun install && bun run build     # aset frontend (atau pakai profil dev di bawah
 - AI: isi `GEMINI_API_KEYS` di `.env`, `docker compose restart app worker scheduler`, lalu `docker compose exec app php artisan ai:check` (lihat [ai.md](ai.md))
 - Impor workflow n8n: `sh scripts/n8n-import.sh` (jalankan dari Git Bash/Linux di folder proyek)
 - Setelah mengubah kode PHP yang dipakai antrean: `docker compose restart worker scheduler` (worker tidak memuat ulang kode otomatis)
+- Tugas terjadwal Laravel ada di `routes/console.php` (cek: `docker compose exec app php artisan schedule:list`). Saat ini: `enrollments:expire` tiap 00:05
 - Typecheck frontend: `bun x tsc --noEmit`
 - Log aplikasi: folder `logs/`. Log container: `docker compose logs -f <layanan>`
 - Setelah menambah paket Composer: `docker compose run --rm app composer install` (vendor ada di volume Docker)

@@ -7,6 +7,7 @@ use App\Http\Requests\TutorRequest;
 use App\Models\Consultation;
 use App\Models\ExpertiseField;
 use App\Models\Tutor;
+use App\Models\TutorAvailability;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -18,8 +19,6 @@ use Inertia\Response;
 /** Profil tutor: bidang keahlian, jenjang, batas sesi, dan jam tersedia. Dikelola admin dan director. */
 class TutorController extends Controller
 {
-    private const DAYS = [1 => 'Senin', 2 => 'Selasa', 3 => 'Rabu', 4 => 'Kamis', 5 => 'Jumat', 6 => 'Sabtu', 7 => 'Minggu'];
-
     public function index(Request $request): Response
     {
         Gate::authorize('viewAny', Tutor::class);
@@ -88,7 +87,7 @@ class TutorController extends Controller
                 'is_active' => $tutor->is_active,
                 'bio' => $tutor->bio,
                 'fields' => $tutor->expertiseFields->map(fn ($f) => ['name' => $f->name, 'group' => $f->group])->sortBy('name')->values(),
-                'availability' => collect(self::DAYS)->map(fn ($name, $day) => [
+                'availability' => collect(TutorAvailability::DAY_NAMES)->map(fn ($name, $day) => [
                     'day' => $name,
                     'slots' => $tutor->availabilities->where('day_of_week', $day)->sortBy('start_time')
                         ->map(fn ($s) => substr($s->start_time, 0, 5).' - '.substr($s->end_time, 0, 5))->values(),
@@ -142,11 +141,7 @@ class TutorController extends Controller
                 'is_active' => $tutor->is_active,
                 'bio' => $tutor->bio,
                 'expertise_field_ids' => $tutor->expertiseFields->pluck('id')->values(),
-                'availabilities' => $tutor->availabilities->sortBy(['day_of_week', 'start_time'])->map(fn ($s) => [
-                    'day_of_week' => $s->day_of_week,
-                    'start_time' => substr($s->start_time, 0, 5),
-                    'end_time' => substr($s->end_time, 0, 5),
-                ])->values(),
+                'availabilities' => $tutor->availabilitiesForForm(),
             ],
             ...$this->formOptions(),
         ]);
@@ -168,13 +163,7 @@ class TutorController extends Controller
     {
         $tutor->expertiseFields()->sync($request->validated('expertise_field_ids'));
 
-        // Jam tersedia diganti seluruhnya sesuai isi form.
-        $tutor->availabilities()->delete();
-        $tutor->availabilities()->createMany(collect($request->validated('availabilities'))->map(fn ($s) => [
-            'day_of_week' => $s['day_of_week'],
-            'start_time' => $s['start_time'],
-            'end_time' => $s['end_time'],
-        ])->all());
+        $tutor->replaceAvailabilities($request->validated('availabilities'));
     }
 
     /** @return array<string, mixed> */
@@ -182,7 +171,7 @@ class TutorController extends Controller
     {
         return [
             'fields' => ExpertiseField::orderBy('group')->orderBy('name')->get(['id', 'name', 'group']),
-            'days' => collect(self::DAYS)->map(fn ($name, $day) => ['value' => $day, 'label' => $name])->values(),
+            'days' => TutorAvailability::dayOptions(),
         ];
     }
 }

@@ -49,6 +49,32 @@ class Tutor extends Model
         return $this->hasMany(TutorAvailability::class);
     }
 
+    /**
+     * Ganti seluruh jam tersedia dengan isi form (data sudah divalidasi). Panggil di dalam transaksi.
+     *
+     * @param  list<array{day_of_week: int, start_time: string, end_time: string}>  $slots
+     */
+    public function replaceAvailabilities(array $slots): void
+    {
+        $this->availabilities()->delete();
+        $this->availabilities()->createMany(collect($slots)->map(fn ($s) => [
+            'day_of_week' => $s['day_of_week'],
+            'start_time' => $s['start_time'],
+            'end_time' => $s['end_time'],
+        ])->all());
+        $this->unsetRelation('availabilities');
+    }
+
+    /** @return list<array{day_of_week: int, start_time: string, end_time: string}> jam tersedia untuk isian form */
+    public function availabilitiesForForm(): array
+    {
+        return $this->availabilities->sortBy(['day_of_week', 'start_time'])->map(fn (TutorAvailability $s) => [
+            'day_of_week' => $s->day_of_week,
+            'start_time' => substr($s->start_time, 0, 5),
+            'end_time' => substr($s->end_time, 0, 5),
+        ])->values()->all();
+    }
+
     public function consultations(): HasMany
     {
         return $this->hasMany(Consultation::class);

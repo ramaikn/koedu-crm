@@ -3,6 +3,7 @@
 namespace App\Http\Requests;
 
 use App\Enums\DegreeLevel;
+use App\Http\Requests\Concerns\ValidatesAvailabilities;
 use App\Support\PhoneNumber;
 use Illuminate\Contracts\Validation\Validator;
 use Illuminate\Foundation\Http\FormRequest;
@@ -10,6 +11,8 @@ use Illuminate\Validation\Rule;
 
 class TutorRequest extends FormRequest
 {
+    use ValidatesAvailabilities;
+
     public function authorize(): bool
     {
         return true;
@@ -37,10 +40,7 @@ class TutorRequest extends FormRequest
             'bio' => ['nullable', 'string', 'max:2000'],
             'expertise_field_ids' => ['required', 'array', 'min:1'],
             'expertise_field_ids.*' => ['integer', 'exists:expertise_fields,id'],
-            'availabilities' => ['present', 'array', 'max:40'],
-            'availabilities.*.day_of_week' => ['required', 'integer', 'between:1,7'],
-            'availabilities.*.start_time' => ['required', 'date_format:H:i'],
-            'availabilities.*.end_time' => ['required', 'date_format:H:i'],
+            ...$this->availabilityRules(),
         ];
     }
 
@@ -57,30 +57,6 @@ class TutorRequest extends FormRequest
 
     public function after(): array
     {
-        return [
-            function (Validator $validator) {
-                if ($validator->errors()->isNotEmpty()) {
-                    return;
-                }
-
-                // Jam tersedia: selesai harus setelah mulai, dan tidak boleh saling tumpang tindih di hari yang sama.
-                $byDay = collect($this->input('availabilities', []))->groupBy('day_of_week');
-                foreach ($byDay as $slots) {
-                    $sorted = $slots->sortBy('start_time')->values();
-                    foreach ($sorted as $i => $slot) {
-                        if ($slot['end_time'] <= $slot['start_time']) {
-                            $validator->errors()->add('availabilities', 'Jam selesai harus setelah jam mulai.');
-
-                            return;
-                        }
-                        if ($i > 0 && $slot['start_time'] < $sorted[$i - 1]['end_time']) {
-                            $validator->errors()->add('availabilities', 'Jam tersedia pada hari yang sama tidak boleh tumpang tindih.');
-
-                            return;
-                        }
-                    }
-                }
-            },
-        ];
+        return [fn (Validator $validator) => $this->checkAvailabilityOverlap($validator)];
     }
 }

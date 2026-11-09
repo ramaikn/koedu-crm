@@ -1,5 +1,5 @@
 import { Field } from '@/components/form-field';
-import InputError from '@/components/input-error';
+import { AvailabilityEditor, availabilityError, type AvailabilitySlot } from '@/components/availability-editor';
 import { PageHeader } from '@/components/page-header';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -8,14 +8,7 @@ import { Textarea } from '@/components/ui/textarea';
 import AppLayout from '@/layouts/app-layout';
 import { type BreadcrumbItem } from '@/types';
 import { Head, Link, useForm } from '@inertiajs/react';
-import { Plus, X } from 'lucide-react';
 import { FormEvent } from 'react';
-
-interface Slot {
-    day_of_week: number;
-    start_time: string;
-    end_time: string;
-}
 
 interface TutorData {
     id: number;
@@ -26,7 +19,7 @@ interface TutorData {
     is_active: boolean;
     bio: string | null;
     expertise_field_ids: number[];
-    availabilities: Slot[];
+    availabilities: AvailabilitySlot[];
 }
 
 interface Props {
@@ -44,7 +37,7 @@ export default function TutorForm({ tutor, fields, days }: Props) {
         is_active: tutor?.is_active ?? true,
         bio: tutor?.bio ?? '',
         expertise_field_ids: tutor?.expertise_field_ids ?? ([] as number[]),
-        availabilities: tutor?.availabilities ?? ([] as Slot[]),
+        availabilities: tutor?.availabilities ?? ([] as AvailabilitySlot[]),
     });
 
     const breadcrumbs: BreadcrumbItem[] = [
@@ -52,16 +45,9 @@ export default function TutorForm({ tutor, fields, days }: Props) {
         { title: tutor ? 'Ubah tutor' : 'Tambah tutor', href: '#' },
     ];
     const groups = Array.from(new Set(fields.map((f) => f.group)));
-    // Pesan error dari server untuk isian jam tersedia datang dengan kunci "availabilities" atau "availabilities.N.xxx".
-    const slotError = Object.entries(errors).find(([key]) => key.startsWith('availabilities'))?.[1];
 
     const toggleField = (id: number) =>
         setData('expertise_field_ids', data.expertise_field_ids.includes(id) ? data.expertise_field_ids.filter((f) => f !== id) : [...data.expertise_field_ids, id]);
-
-    const addSlot = (day: number) => setData('availabilities', [...data.availabilities, { day_of_week: day, start_time: '09:00', end_time: '12:00' }]);
-    const updateSlot = (index: number, patch: Partial<Slot>) =>
-        setData('availabilities', data.availabilities.map((slot, i) => (i === index ? { ...slot, ...patch } : slot)));
-    const removeSlot = (index: number) => setData('availabilities', data.availabilities.filter((_, i) => i !== index));
 
     function submit(e: FormEvent) {
         e.preventDefault();
@@ -135,31 +121,7 @@ export default function TutorForm({ tutor, fields, days }: Props) {
                         <h2 className="text-sm font-medium">Jam tersedia</h2>
                         <p className="text-muted-foreground text-xs">Dipakai untuk saran tutor dan peringatan jadwal. Hari tanpa jam berarti tidak tersedia.</p>
                     </div>
-                    {days.map((day) => {
-                        const slots = data.availabilities.map((slot, index) => ({ slot, index })).filter(({ slot }) => slot.day_of_week === day.value);
-                        return (
-                            <div key={day.value} className="flex flex-wrap items-start gap-3 rounded-lg border p-3">
-                                <div className="w-20 pt-2 text-sm font-medium">{day.label}</div>
-                                <div className="flex min-w-0 flex-1 flex-col gap-2">
-                                    {slots.length === 0 && <span className="text-muted-foreground pt-2 text-sm">Tidak tersedia</span>}
-                                    {slots.map(({ slot, index }) => (
-                                        <div key={index} className="flex items-center gap-2">
-                                            <Input type="time" value={slot.start_time} onChange={(e) => updateSlot(index, { start_time: e.target.value })} className="w-32" aria-label={`Mulai ${day.label}`} />
-                                            <span className="text-muted-foreground">-</span>
-                                            <Input type="time" value={slot.end_time} onChange={(e) => updateSlot(index, { end_time: e.target.value })} className="w-32" aria-label={`Selesai ${day.label}`} />
-                                            <Button type="button" variant="ghost" size="icon" onClick={() => removeSlot(index)} aria-label="Hapus jam">
-                                                <X />
-                                            </Button>
-                                        </div>
-                                    ))}
-                                </div>
-                                <Button type="button" variant="outline" size="sm" onClick={() => addSlot(day.value)}>
-                                    <Plus /> Tambah jam
-                                </Button>
-                            </div>
-                        );
-                    })}
-                    <InputError message={slotError} />
+                    <AvailabilityEditor days={days} value={data.availabilities} onChange={(slots) => setData('availabilities', slots)} error={availabilityError(errors)} />
                 </div>
 
                 <Field label="Catatan" htmlFor="bio" error={errors.bio}>
