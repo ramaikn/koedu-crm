@@ -2,7 +2,10 @@
 
 Butuh Docker Desktop (Windows: WSL2) atau Docker Engine + Compose (Ubuntu).
 
-## Pertama kali
+## Pertama kali (cara cepat)
+Setelah clone, cukup jalankan `sh scripts/setup.sh` (Git Bash atau Linux). Skrip memeriksa Docker dan bun, membuat `.env` dengan rahasia acak, lalu menjalankan semua langkah manual di bawah. Aman diulang. Kunci AI, Google Sheets, dan WhatsApp tetap diisi manual di `.env`.
+
+## Pertama kali (manual)
 ```bash
 cp .env.example .env            # isi DB_PASSWORD, WAHA_API_KEY, WAHA_DASHBOARD_PASSWORD, N8N_ENCRYPTION_KEY, N8N_API_TOKEN
 docker compose build app
